@@ -16,8 +16,10 @@
   .numero { font-family: 'IBM Plex Mono', monospace; background: #E4F1EE; color: #0B4F45; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
   .ejercicio h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 0; }
   .dosis { font-family: 'IBM Plex Mono', monospace; color: #E2502F; font-size: 13px; margin: 2px 0 0; }
-  .video-wrap { position: relative; padding-bottom: 56.25%; height: 0; border-radius: 8px; overflow: hidden; background: #16232E; }
+  .video-wrap { position: relative; padding-bottom: 56.25%; height: 0; border-radius: 8px; overflow: hidden; background: #16232E; cursor: pointer; }
+  .video-wrap img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
   .video-wrap iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+  .play-boton { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.92; }
   .link-video { display: inline-block; padding: 8px 14px; background: #0F6B5C; color: #fff; text-decoration: none; border-radius: 7px; font-size: 13.5px; }
   .error { text-align: center; padding: 60px 16px; color: #55636D; }
   .logo-heal { height: 34px; width: auto; margin-bottom: 18px; display: block; }
@@ -67,7 +69,10 @@ function render() {
   const bloques = ejercicios.map((ex, i) => {
     const dosis = `${ex.s || '?'} series x ${ex.d || '?'}`;
     const media = ex.y
-      ? `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${ex.y}" title="${escapeHtml(ex.n)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      ? `<div class="video-wrap" data-yt="${ex.y}" data-titulo="${escapeHtml(ex.n)}" onclick="reproducir(this)">
+           <img src="https://img.youtube.com/vi/${ex.y}/hqdefault.jpg" alt="${escapeHtml(ex.n)}" loading="lazy" />
+           <div class="play-boton"><svg viewBox="0 0 68 48" width="56"><path d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55 C3.97,2.33,2.27,4.81,1.48,7.74C0.06,13.05,0,24,0,24s0.06,10.95,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19 C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.64-3.26,5.42-6.19C67.94,34.95,68,24,68,24S67.94,13.05,66.52,7.74z" fill="#212121" fill-opacity="0.8"></path><path d="M 45,24 27,14 27,34" fill="#fff"></path></svg></div>
+         </div>`
       : `<a class="link-video" href="${escapeHtml(ex.u)}" target="_blank" rel="noopener">Ver video ↗</a>`;
     return `
       <section class="ejercicio">
@@ -88,6 +93,14 @@ function render() {
     <p class="subtitulo">${escapeHtml(paciente)}</p>
     ${bloques || '<div class="error">Esta rutina no tiene ejercicios.</div>'}
   `;
+}
+
+function reproducir(el) {
+  const yt = el.dataset.yt;
+  const titulo = el.dataset.titulo;
+  el.innerHTML = `<iframe src="https://www.youtube.com/embed/${yt}?autoplay=1" title="${titulo}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  el.onclick = null;
+  el.style.cursor = 'default';
 }
 
 render();
