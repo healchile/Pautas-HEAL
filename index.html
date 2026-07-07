@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rutina de ejercicios</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@500&display=swap');
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, Arial, sans-serif; background: #F5F6F2; color: #16232E; margin: 0; padding: 24px 16px 48px; }
+  .contenedor { max-width: 640px; margin: 0 auto; }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; margin-bottom: 4px; }
+  .subtitulo { color: #55636D; font-size: 14px; margin-top: 0; margin-bottom: 28px; }
+  .ejercicio { background: #fff; border: 1px solid #DCE1DA; border-radius: 12px; padding: 16px; margin-bottom: 18px; }
+  .ejercicio-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .numero { font-family: 'IBM Plex Mono', monospace; background: #E4F1EE; color: #0B4F45; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .ejercicio h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin: 0; }
+  .dosis { font-family: 'IBM Plex Mono', monospace; color: #E2502F; font-size: 13px; margin: 2px 0 0; }
+  .video-wrap { position: relative; padding-bottom: 56.25%; height: 0; border-radius: 8px; overflow: hidden; background: #16232E; }
+  .video-wrap iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+  .link-video { display: inline-block; padding: 8px 14px; background: #0F6B5C; color: #fff; text-decoration: none; border-radius: 7px; font-size: 13.5px; }
+  .error { text-align: center; padding: 60px 16px; color: #55636D; }
+</style>
+</head>
+<body>
+  <div class="contenedor" id="contenedor">
+    <div class="error">Cargando rutina…</div>
+  </div>
+
+<script>
+function b64UrlDecode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  return decodeURIComponent(escape(atob(str)));
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function render() {
+  const cont = document.getElementById('contenedor');
+  const params = new URLSearchParams(window.location.search);
+  const data = params.get('r');
+
+  if (!data) {
+    cont.innerHTML = '<div class="error">Este link no tiene una rutina cargada.</div>';
+    return;
+  }
+
+  let rutina;
+  try {
+    rutina = JSON.parse(b64UrlDecode(data));
+  } catch (e) {
+    cont.innerHTML = '<div class="error">No se pudo leer esta rutina. Pide que te reenvíen el link.</div>';
+    return;
+  }
+
+  const paciente = rutina.p || '';
+  const ejercicios = rutina.e || [];
+
+  const bloques = ejercicios.map((ex, i) => {
+    const dosis = `${ex.s || '?'} series x ${ex.d || '?'}`;
+    const media = ex.y
+      ? `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${ex.y}" title="${escapeHtml(ex.n)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      : `<a class="link-video" href="${escapeHtml(ex.u)}" target="_blank" rel="noopener">Ver video ↗</a>`;
+    return `
+      <section class="ejercicio">
+        <div class="ejercicio-header">
+          <span class="numero">${i + 1}</span>
+          <div>
+            <h2>${escapeHtml(ex.n)}</h2>
+            <p class="dosis">${escapeHtml(dosis)}</p>
+          </div>
+        </div>
+        ${media}
+      </section>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <h1>Ejercicios para continuar en casa</h1>
+    <p class="subtitulo">${escapeHtml(paciente)}</p>
+    ${bloques || '<div class="error">Esta rutina no tiene ejercicios.</div>'}
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
