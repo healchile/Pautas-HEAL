@@ -1,0 +1,25 @@
+{
+  "name": "Pauta HEAL",
+  "short_name": "Pauta HEAL",
+  "description": "Genera y envía pautas de ejercicios a pacientes dados de alta",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F6F2",
+  "theme_color": "#0F6B5C",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
