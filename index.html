@@ -334,6 +334,8 @@ input[type="text"]:focus {
     <div class="sheet-actions">
       <button class="btn btn-primary" id="btn-copiar-link">Copiar link</button>
       <button class="btn btn-coral" id="btn-copiar-mensaje">Copiar mensaje completo</button>
+      <button class="btn" id="btn-acortar-tinyurl">Acortar link (TinyURL)</button>
+      <button class="btn" id="btn-acortar-isgd">Acortar link (is.gd)</button>
     </div>
     <div class="status-msg" id="status-msg"></div>
     <button class="btn-close" id="btn-cerrar">Cerrar</button>
@@ -607,6 +609,44 @@ $('#btn-copiar-mensaje').addEventListener('click', async () => {
     $('#status-msg').textContent = 'Mensaje copiado. Ya lo puedes pegar en WhatsApp o correo.';
   } catch (e) {
     $('#status-msg').textContent = 'No se pudo copiar. Selecciona el texto manualmente.';
+  }
+});
+
+function actualizarLinkYMensaje(nuevoLink) {
+  $('#link-box').textContent = nuevoLink;
+  $('#msg-box').value = generarMensaje(nuevoLink);
+}
+
+$('#btn-acortar-tinyurl').addEventListener('click', async () => {
+  const linkActual = $('#link-box').textContent;
+  $('#status-msg').textContent = 'Acortando...';
+  try {
+    const resp = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(linkActual));
+    if (!resp.ok) throw new Error('fallo');
+    const corto = (await resp.text()).trim();
+    if (!corto.startsWith('http')) throw new Error('respuesta inválida');
+    actualizarLinkYMensaje(corto);
+    $('#status-msg').textContent = 'Link acortado con TinyURL.';
+  } catch (e) {
+    // Si el navegador bloquea la petición directa, abrimos la página para copiarlo manualmente
+    window.open('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(linkActual), '_blank');
+    $('#status-msg').textContent = 'Se abrió una pestaña con el link corto — cópialo desde ahí.';
+  }
+});
+
+$('#btn-acortar-isgd').addEventListener('click', async () => {
+  const linkActual = $('#link-box').textContent;
+  $('#status-msg').textContent = 'Acortando...';
+  try {
+    const resp = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(linkActual));
+    if (!resp.ok) throw new Error('fallo');
+    const corto = (await resp.text()).trim();
+    if (!corto.startsWith('http')) throw new Error('respuesta inválida');
+    actualizarLinkYMensaje(corto);
+    $('#status-msg').textContent = 'Link acortado con is.gd.';
+  } catch (e) {
+    window.open('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(linkActual), '_blank');
+    $('#status-msg').textContent = 'Se abrió una pestaña con el link corto — cópialo desde ahí.';
   }
 });
 
