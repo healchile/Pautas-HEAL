@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAR-Q+ · HEAL Vital 60+</title>
+<style>
+  :root{
+    --navy:#1A3A5C; --navy-d:#12283F; --blue:#2E6DA4; --blue-l:#D6E8F7; --blue-p:#EBF4FB;
+    --teal:#0F6E56; --teal-l:#E1F0EF; --green:#1B8A4B; --green-l:#E9F7EE;
+    --amber:#C87A00; --amber-l:#FCF1DC; --red:#B71C1C; --red-l:#FCEBEB;
+    --gray-d:#3A3A3A; --gray-m:#7A7A7A; --gray-l:#F2F5F8; --white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#eef3f8;color:var(--gray-d);line-height:1.5;padding:0}
+  .wrap{max-width:760px;margin:0 auto;padding:0 0 60px}
+  header{background:var(--navy);color:#fff;padding:26px 24px 22px;text-align:center}
+  header .brand{font-size:13px;letter-spacing:2px;color:var(--blue-l);text-transform:uppercase;margin-bottom:6px}
+  header h1{font-size:26px;font-weight:700;margin-bottom:4px}
+  header p{font-size:14px;color:#AFC8E0}
+  .card{background:#fff;margin:18px 16px;border-radius:14px;box-shadow:0 2px 14px rgba(26,58,92,.08);overflow:hidden}
+  .card-pad{padding:22px 24px}
+  .intro{font-size:14.5px;color:var(--gray-d)}
+  .intro strong{color:var(--navy)}
+  .step-label{display:inline-block;background:var(--teal-l);color:var(--teal);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px}
+  .field{border:1px solid #e4ebf2;border-radius:10px;padding:15px 16px;margin-bottom:12px;transition:.15s}
+  .field.answered{border-color:var(--blue-l);background:var(--blue-p)}
+  .field .q{font-size:15px;margin-bottom:10px;font-weight:500}
+  .field .q .num{color:var(--blue);font-weight:700;margin-right:5px}
+  .field .hint{display:block;font-size:12.5px;color:var(--gray-m);font-weight:400;margin-top:5px;font-style:italic}
+  .opts{display:flex;gap:10px}
+  .opt{flex:1;text-align:center;padding:11px;border:1.5px solid #d4dde6;border-radius:9px;cursor:pointer;font-weight:600;font-size:15px;user-select:none;transition:.12s;background:#fff}
+  .opt:hover{border-color:var(--blue)}
+  .opt.sel-si{background:var(--amber-l);border-color:var(--amber);color:var(--amber)}
+  .opt.sel-no{background:var(--green-l);border-color:var(--green);color:var(--green)}
+  .detail{margin-top:10px;display:none}
+  .detail.show{display:block}
+  .detail input{width:100%;padding:10px 12px;border:1px solid #d4dde6;border-radius:8px;font-size:14px;font-family:inherit}
+  .detail label{font-size:12.5px;color:var(--gray-m);display:block;margin-bottom:5px}
+  .followup{margin-top:14px;border-left:3px solid var(--amber);background:var(--amber-l);border-radius:0 10px 10px 0;padding:14px 16px;display:none}
+  .followup.show{display:block}
+  .followup h3{font-size:14px;color:var(--amber);margin-bottom:4px}
+  .followup .sub{font-size:12.5px;color:var(--gray-m);margin-bottom:12px}
+  .followup .field{background:#fff;border-color:#eadfc8}
+  .followup .field.answered{background:#fff;border-color:var(--amber)}
+  h2.sec{font-size:18px;color:var(--navy);margin-bottom:6px;font-weight:700}
+  .sec-desc{font-size:13.5px;color:var(--gray-m);margin-bottom:18px}
+  .personal .row{display:flex;gap:12px;flex-wrap:wrap}
+  .personal .col{flex:1;min-width:180px;margin-bottom:12px}
+  .personal label{font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:5px}
+  .personal input{width:100%;padding:11px 12px;border:1px solid #d4dde6;border-radius:8px;font-size:14px;font-family:inherit}
+  .declaration{background:var(--gray-l);border-radius:10px;padding:16px 18px;font-size:12.5px;color:var(--gray-d);margin:16px 0;line-height:1.55}
+  .check-row{display:flex;align-items:flex-start;gap:10px;margin-top:14px;cursor:pointer}
+  .check-row input{margin-top:3px;width:18px;height:18px;flex-shrink:0;cursor:pointer}
+  .check-row label{font-size:13.5px;cursor:pointer}
+  .btn{display:block;width:100%;padding:15px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+  .btn-primary{background:var(--teal);color:#fff}
+  .btn-primary:hover{background:#0c5a46}
+  .btn-primary:disabled{background:#b8c4cf;cursor:not-allowed}
+  .btn-sec{background:#fff;color:var(--blue);border:1.5px solid var(--blue);margin-top:10px}
+  .result{display:none}
+  .result.show{display:block}
+  .result-banner{padding:26px 24px;text-align:center;color:#fff}
+  .result-banner.apto{background:var(--green)}
+  .result-banner.control{background:var(--amber)}
+  .result-banner.derivar{background:var(--amber)}
+  .result-banner.critico{background:var(--red)}
+  .result-banner .icon{font-size:44px;margin-bottom:8px}
+  .result-banner h2{font-size:23px;margin-bottom:6px}
+  .result-banner p{font-size:14.5px;opacity:.95}
+  .summary{padding:22px 24px}
+  .summary h3{font-size:15px;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--blue-l)}
+  .sum-row{display:flex;justify-content:space-between;padding:7px 0;font-size:13.5px;border-bottom:1px solid #f0f0f0}
+  .sum-row .k{color:var(--gray-m)}
+  .sum-row .v{font-weight:600;text-align:right;max-width:60%}
+  .flag{background:var(--red-l);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:10px 14px;margin:6px 0;font-size:13px}
+  .flag .fq{font-weight:600;color:var(--red)}
+  .noflag{background:var(--green-l);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:12px 14px;font-size:13.5px;color:var(--teal)}
+  .err{background:var(--red-l);color:var(--red);padding:12px 16px;border-radius:8px;font-size:13.5px;margin-bottom:14px;display:none}
+  .err.show{display:block}
+  .footer-note{text-align:center;font-size:11.5px;color:var(--gray-m);padding:16px 24px 0}
+  @media print{
+    body{background:#fff}
+    .no-print{display:none!important}
+    .card{box-shadow:none;border:1px solid #ddd;margin:10px 0}
+    header{background:var(--navy)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .result-banner{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">HEAL Vital 60+</div>
+    <h1>Cuestionario de Aptitud Física</h1>
+    <p>PAR-Q+ · Evaluación previa para el programa de adulto mayor</p>
+  </header>
+
+  <!-- FORMULARIO -->
+  <div id="formView">
+
+    <!-- Datos personales -->
+    <div class="card"><div class="card-pad personal">
+      <h2 class="sec">Datos del participante</h2>
+      <p class="sec-desc">Complete sus datos antes de comenzar.</p>
+      <div class="row">
+        <div class="col"><label>Nombre completo</label><input id="pNombre" type="text" placeholder="Nombre y apellido"></div>
+        <div class="col"><label>Edad</label><input id="pEdad" type="number" min="0" placeholder="Años"></div>
+      </div>
+      <div class="row">
+        <div class="col"><label>Fecha</label><input id="pFecha" type="date"></div>
+        <div class="col"><label>Teléfono de contacto</label><input id="pFono" type="tel" placeholder="Opcional"></div>
+      </div>
+    </div></div>
+
+    <!-- Intro -->
+    <div class="card"><div class="card-pad">
+      <p class="intro">Los beneficios de la actividad física frecuente están probados y suele ser muy segura para la mayoría de las personas. <strong>Este cuestionario indica si necesita consultar con un médico antes de iniciar el programa.</strong> Conteste con sinceridad las siguientes preguntas.</p>
+    </div></div>
+
+    <!-- Página 1: preguntas generales -->
+    <div class="card"><div class="card-pad">
+      <span class="step-label">Preguntas generales de salud</span>
+      <div id="generalQuestions"></div>
+    </div></div>
+
+    <!-- Preguntas de seguimiento (dinámicas) -->
+    <div class="card" id="followupCard" style="display:none"><div class="card-pad">
+      <span class="step-label" style="background:var(--amber-l);color:var(--amber)">Preguntas de seguimiento</span>
+      <p class="sec-desc">Como respondió SÍ a alguna pregunta anterior, por favor complete las siguientes preguntas sobre su condición.</p>
+      <div id="followupQuestions"></div>
+    </div></div>
+
+    <!-- Declaración -->
+    <div class="card"><div class="card-pad">
+      <h2 class="sec">Declaración del participante</h2>
+      <div class="declaration">
+        Declaro haber leído y comprendido el cuestionario. Entiendo que esta declaración tiene una validez de 12 meses a partir de la fecha en que se completó y queda invalidada si hay cambios en mi salud. Autorizo a HEAL Sport Therapy &amp; Wellness a guardar una copia de este cuestionario para uso interno, respetando la confidencialidad del documento conforme a la ley vigente.
+      </div>
+      <div class="check-row" onclick="toggleDecl(event)">
+        <input type="checkbox" id="declCheck">
+        <label for="declCheck">He leído y acepto la declaración. La información entregada es verdadera.</label>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="card-pad">
+      <div class="err" id="errBox"></div>
+      <button class="btn btn-primary" id="submitBtn" onclick="evaluar()">Ver resultado</button>
+    </div></div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div id="resultView" class="result">
+    <div class="card">
+      <div class="result-banner" id="resultBanner">
+        <div class="icon" id="resultIcon"></div>
+        <h2 id="resultTitle"></h2>
+        <p id="resultSub"></p>
+      </div>
+      <div class="summary">
+        <h3>Resumen para el equipo clínico</h3>
+        <div id="summaryData"></div>
+        <div id="flagsSection" style="margin-top:16px"></div>
+      </div>
+    </div>
+    <div class="card no-print"><div class="card-pad">
+      <button class="btn btn-primary" onclick="window.print()">Imprimir / Guardar como PDF</button>
+      <button class="btn btn-sec" onclick="copiarResumen()">Copiar resumen (para enviar al médico)</button>
+      <button class="btn btn-sec" onclick="reiniciar()">Completar otro cuestionario</button>
+    </div></div>
+    <p class="footer-note">HEAL Sport Therapy &amp; Wellness · PAR-Q+ en español (Schwartz et al., 2019) · Documento confidencial de uso interno</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════ DEFINICIÓN DE PREGUNTAS ═══════════════
+const generales = [
+  {id:'g1', t:'¿Alguna vez su médico le ha comunicado que tiene problemas cardíacos O hipertensión arterial?'},
+  {id:'g2', t:'¿Siente usted dolor en el pecho en reposo, durante las actividades de la vida diaria O cuando realiza actividad física?', critica:true},
+  {id:'g3', t:'¿Tiene usted problemas de equilibrio debido a mareos O ha sufrido pérdida de consciencia en los últimos 12 meses?', hint:'Conteste NO si el mareo fue debido a una sobre-hiperventilación (incluso durante ejercicio vigoroso).'},
+  {id:'g4', t:'¿Alguna vez le diagnosticaron otra enfermedad crónica (sin ser enfermedad cardíaca o hipertensión arterial)?', detail:'¿Cuál? (precise por favor)'},
+  {id:'g5', t:'¿Está usted tomando actualmente medicación para alguna enfermedad crónica?', detail:'Detalle enfermedad(es) y medicación asociada'},
+  {id:'g6', t:'¿Sufre actualmente (o ha sufrido en los últimos 12 meses) alguna lesión ósea, articular o de tejidos blandos (muscular, ligamentosa o tendinosa) que empeoraría al hacerse más activo?', hint:'Responda NO si tuvo algún problema en el pasado que no limita su capacidad actual.', detail:'¿Cuál? (precise por favor)'},
+  {id:'g7', t:'¿Alguna vez su médico le ha dicho que solo debe realizar actividad física bajo supervisión médica?'},
+];
+
+// Bloques de seguimiento: cada uno se activa por una "condición gatillo"
+// trigger: función que decide si el bloque se muestra según respuestas generales/detalles
+const seguimiento = [
+  {
+    id:'b_artritis', titulo:'Artritis, osteoporosis o problemas de columna',
+    triggerText:'Indicó una lesión o problema articular / óseo',
+    trigger:(g)=> g.g6==='si',
+    preguntas:[
+      {id:'s1a', t:'¿Tiene dificultades para controlar los síntomas de su artritis, osteoporosis o problema de columna con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está siendo tratado con fármacos u otros medios.'},
+      {id:'s1b', t:'¿Tiene problemas articulares dolorosos, fractura reciente o por osteoporosis/cáncer, desplazamientos vertebrales (ej. espondilolistesis) y/o espondilólisis?'},
+      {id:'s1c', t:'¿Ha recibido tratamiento con corticoides inyectables o vía oral regularmente durante más de tres meses?'},
+    ]
+  },
+  {
+    id:'b_cancer', titulo:'Cáncer',
+    triggerText:'Indicó enfermedad crónica (posible cáncer)',
+    trigger:(g)=> g.g4==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s2a', t:'¿Su diagnóstico de cáncer incluye alguno de estos: pulmonar/broncógeno, mieloma múltiple (células plasmáticas), cabeza y/o cuello?'},
+      {id:'s2b', t:'¿Se encuentra actualmente en tratamiento con radioterapia o quimioterapia?', critica:true},
+    ]
+  },
+  {
+    id:'b_cardio', titulo:'Enfermedad cardiovascular o cardíaca',
+    triggerText:'Indicó problema cardíaco / hipertensión',
+    trigger:(g)=> g.g1==='si',
+    preguntas:[
+      {id:'s3a', t:'¿Tiene dificultades para controlar los síntomas de su enfermedad cardiovascular con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está siendo tratado con fármacos u otros medios.'},
+      {id:'s3b', t:'¿Sufre de arritmia que requiere tratamiento médico? (ej. fibrilación auricular, extrasístoles ventriculares)', critica:true},
+      {id:'s3c', t:'¿Sufre de insuficiencia cardíaca crónica?', critica:true},
+      {id:'s3d', t:'¿Le han diagnosticado enfermedad coronaria (cardiovascular) y hace 2 meses o más que no participa en actividades físicas frecuentes?'},
+    ]
+  },
+  {
+    id:'b_hta', titulo:'Hipertensión arterial',
+    triggerText:'Indicó problema cardíaco / hipertensión',
+    trigger:(g)=> g.g1==='si',
+    preguntas:[
+      {id:'s4a', t:'¿Tiene dificultades para controlar los síntomas de su hipertensión con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está siendo tratado con fármacos u otros medios.'},
+      {id:'s4b', t:'¿Su presión arterial en reposo es igual o superior a 160/90 mmHg, con o sin medicación?', hint:'Conteste SÍ si desconoce su presión arterial de reposo.'},
+    ]
+  },
+  {
+    id:'b_metabolica', titulo:'Enfermedad metabólica (diabetes)',
+    triggerText:'Indicó enfermedad crónica o medicación (posible enf. metabólica)',
+    trigger:(g)=> g.g4==='si' || g.g5==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s5a', t:'¿Tiene dificultades para mantener los niveles de glucosa en sangre con alimentación, fármacos u otro procedimiento indicado por su médico?'},
+      {id:'s5b', t:'¿Sufre con frecuencia bajos niveles de glucosa (hipoglicemia) después del ejercicio y/o durante las actividades de la vida diaria?', hint:'Signos: temblores, nerviosismo, irritabilidad, sudoración excesiva, mareos, confusión, dificultad para hablar, debilidad o somnolencia.'},
+      {id:'s5c', t:'¿Tiene signos o síntomas de complicaciones de la diabetes (enfermedad cardíaca/vascular, o complicaciones en riñones, ojos o sensibilidad de pies)?'},
+      {id:'s5d', t:'¿Sufre algún otro tipo de enfermedad metabólica (diabetes gestacional, enfermedad renal crónica o problemas hepáticos)?'},
+      {id:'s5e', t:'¿Tiene planeado realizar en el futuro inmediato ejercicio inusualmente vigoroso o intenso para usted?'},
+    ]
+  },
+  {
+    id:'b_mental', titulo:'Salud mental o problemas de aprendizaje',
+    triggerText:'Indicó enfermedad crónica (posible trastorno de salud mental)',
+    trigger:(g)=> g.g4==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s6a', t:'¿Tiene dificultades para controlar su enfermedad con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está recibiendo tratamiento.'},
+      {id:'s6b', t:'¿Tiene Síndrome de Down Y problemas de espalda que afectan los nervios o los músculos?'},
+    ]
+  },
+  {
+    id:'b_respiratoria', titulo:'Enfermedad respiratoria',
+    triggerText:'Indicó enfermedad crónica (posible enf. respiratoria)',
+    trigger:(g)=> g.g4==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s7a', t:'¿Tiene dificultades para controlar su enfermedad respiratoria con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está siendo tratado.'},
+      {id:'s7b', t:'¿Su médico le ha comentado que el oxígeno en su sangre es insuficiente en reposo o durante la actividad, o que se recomienda oxigenoterapia?'},
+      {id:'s7c', t:'Si es asmático: ¿tiene síntomas actuales (opresión en el pecho, silbidos, esfuerzo respiratorio constante, tos persistente más de 2 días/semana) o ha necesitado medicación de rescate más de 2 veces la semana pasada?'},
+      {id:'s7d', t:'¿Su médico alguna vez le ha dicho que tiene presión arterial alta en los vasos sanguíneos de sus pulmones?'},
+    ]
+  },
+  {
+    id:'b_medular', titulo:'Lesión medular (vertebral)',
+    triggerText:'Indicó enfermedad crónica (posible lesión medular)',
+    trigger:(g)=> g.g4==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s8a', t:'¿Tiene dificultades para controlar su condición con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está siendo tratado.'},
+      {id:'s8b', t:'¿Habitualmente muestra baja presión sanguínea en reposo, suficiente para causar mareos, aturdimiento y/o desmayos?'},
+      {id:'s8c', t:'¿Su médico le ha indicado que presenta ataques repentinos de presión arterial alta (disreflexia autonómica)?'},
+    ]
+  },
+  {
+    id:'b_acv', titulo:'Accidente cerebrovascular (ACV)',
+    triggerText:'Indicó enfermedad crónica o problema de equilibrio (posible ACV)',
+    trigger:(g)=> g.g4==='si' || g.g3==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s9a', t:'¿Tiene dificultades para controlar su condición con medicación u otro tratamiento indicado por su médico?', hint:'Conteste NO si no está siendo tratado.'},
+      {id:'s9b', t:'¿Tiene dificultades de movilidad o para caminar?'},
+      {id:'s9c', t:'¿Ha sufrido un ACV o un trastorno neurológico o de los músculos en los últimos 6 meses?', critica:true},
+    ]
+  },
+  {
+    id:'b_otro', titulo:'Otro trastorno médico o dos o más condiciones',
+    triggerText:'Indicó otra enfermedad crónica / supervisión médica',
+    trigger:(g)=> g.g4==='si' || g.g7==='si',
+    opcional:true,
+    preguntas:[
+      {id:'s10a', t:'¿Ha experimentado pérdida de conocimiento o síncope por una lesión en la cabeza en los últimos 12 meses, o ha sido diagnosticado con una concusión/conmoción cerebral en los últimos 12 meses?'},
+      {id:'s10b', t:'¿Padece alguna enfermedad no considerada antes, como epilepsia, problemas renales o enfermedades neurológicas?'},
+      {id:'s10c', t:'¿Padece en este momento dos o más enfermedades crónicas?', detail:'Indique sus enfermedades y los fármacos correspondientes'},
+    ]
+  },
+];
+
+const answers = {general:{}, generalDetail:{}, followup:{}, followupDetail:{}};
+
+// ═══════════════ RENDER PREGUNTAS GENERALES ═══════════════
+function renderQuestion(q, scope){
+  const div = document.createElement('div');
+  div.className='field'; div.id='field_'+q.id;
+  let html = `<div class="q"><span class="num">${scope==='g'?q.id.replace('g','')+')':''}</span>${q.t}`;
+  if(q.hint) html+=`<span class="hint">${q.hint}</span>`;
+  html+=`</div><div class="opts">
+    <div class="opt" id="${q.id}_si" onclick="answer('${q.id}','si','${scope}')">SÍ</div>
+    <div class="opt" id="${q.id}_no" onclick="answer('${q.id}','no','${scope}')">NO</div>
+  </div>`;
+  if(q.detail){
+    html+=`<div class="detail" id="detail_${q.id}"><label>${q.detail}</label><input type="text" id="detailInput_${q.id}" oninput="saveDetail('${q.id}','${scope}',this.value)"></div>`;
+  }
+  div.innerHTML=html;
+  return div;
+}
+
+const gc = document.getElementById('generalQuestions');
+generales.forEach(q=> gc.appendChild(renderQuestion(q,'g')));
+
+// ═══════════════ MANEJO DE RESPUESTAS ═══════════════
+function answer(id, val, scope){
+  const store = scope==='g' ? answers.general : answers.followup;
+  store[id]=val;
+  document.getElementById(id+'_si').classList.toggle('sel-si', val==='si');
+  document.getElementById(id+'_no').classList.toggle('sel-no', val==='no');
+  document.getElementById(id+'_si').classList.toggle('sel-no', false);
+  document.getElementById(id+'_no').classList.toggle('sel-si', false);
+  document.getElementById('field_'+id).classList.add('answered');
+  // Mostrar campo detalle si respondió SÍ
+  const dq = [...generales, ...seguimiento.flatMap(b=>b.preguntas)].find(x=>x.id===id);
+  if(dq && dq.detail){
+    document.getElementById('detail_'+id).classList.toggle('show', val==='si');
+  }
+  if(scope==='g') refreshFollowups();
+}
+function saveDetail(id, scope, val){
+  if(scope==='g') answers.generalDetail[id]=val; else answers.followupDetail[id]=val;
+}
+function toggleDecl(e){
+  if(e.target.tagName!=='INPUT'){
+    const c=document.getElementById('declCheck'); c.checked=!c.checked;
+  }
+}
+
+// ═══════════════ MOSTRAR SEGUIMIENTO SEGÚN RESPUESTAS ═══════════════
+function refreshFollowups(){
+  const anySi = Object.values(answers.general).some(v=>v==='si');
+  const card = document.getElementById('followupCard');
+  const cont = document.getElementById('followupQuestions');
+  if(!anySi){ card.style.display='none'; cont.innerHTML=''; return; }
+  card.style.display='block';
+  // Determinar qué bloques mostrar
+  const activos = seguimiento.filter(b=> b.trigger(answers.general));
+  // Reconstruir solo si cambió el set
+  const activeIds = activos.map(b=>b.id).join(',');
+  if(cont.dataset.active === activeIds) return;
+  cont.dataset.active = activeIds;
+  // Guardar respuestas previas
+  cont.innerHTML='';
+  activos.forEach(b=>{
+    const bloque=document.createElement('div');
+    bloque.className='followup show';
+    bloque.innerHTML=`<h3>${b.titulo}</h3><div class="sub">Complete si corresponde a su condición${b.opcional?' (si no aplica a usted, responda NO)':''}.</div>`;
+    b.preguntas.forEach(q=>{
+      const f=renderQuestion(q,'f');
+      bloque.appendChild(f);
+      // restaurar respuesta previa
+      if(answers.followup[q.id]){
+        setTimeout(()=>{
+          const v=answers.followup[q.id];
+          document.getElementById(q.id+'_si').classList.toggle('sel-si',v==='si');
+          document.getElementById(q.id+'_no').classList.toggle('sel-no',v==='no');
+          document.getElementById('field_'+q.id).classList.add('answered');
+        },0);
+      }
+    });
+    cont.appendChild(bloque);
+  });
+}
+
+// ═══════════════ EVALUACIÓN FINAL ═══════════════
+function evaluar(){
+  const err=document.getElementById('errBox');
+  err.classList.remove('show');
+  // Validaciones
+  const nombre=document.getElementById('pNombre').value.trim();
+  const edad=document.getElementById('pEdad').value.trim();
+  if(!nombre){ showErr('Por favor ingrese el nombre del participante.'); return; }
+  if(!edad){ showErr('Por favor ingrese la edad.'); return; }
+  // Todas las generales respondidas
+  for(const q of generales){
+    if(!answers.general[q.id]){ showErr('Por favor responda todas las preguntas generales (falta la '+q.id.replace('g','')+').'); document.getElementById('field_'+q.id).scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  }
+  // Si hay seguimiento activo, todas respondidas
+  const anySi = Object.values(answers.general).some(v=>v==='si');
+  const activos = anySi ? seguimiento.filter(b=> b.trigger(answers.general)) : [];
+  for(const b of activos){
+    for(const q of b.preguntas){
+      if(!answers.followup[q.id]){ showErr('Por favor responda todas las preguntas de seguimiento del bloque "'+b.titulo+'".'); document.getElementById('field_'+q.id).scrollIntoView({behavior:'smooth',block:'center'}); return; }
+    }
+  }
+  if(!document.getElementById('declCheck').checked){ showErr('Debe aceptar la declaración del participante para continuar.'); return; }
+
+  // ── LÓGICA DE TRES NIVELES ──
+  // VERDE (apto): todas las generales NO, o condiciones controladas (seguimiento todo NO)
+  // ROJO (crítico): alguna bandera crítica en SÍ -> NO evaluar, ve al médico primero
+  // AMARILLO (apto con control): banderas no críticas -> evaluar controlando signos vitales
+  const generalesSi = generales.filter(q=> answers.general[q.id]==='si');
+  const seguimientoSi = [];
+  const criticasSi = [];
+  // Revisar generales críticas (dolor de pecho = g2)
+  generales.forEach(q=>{
+    if(q.critica && answers.general[q.id]==='si'){
+      criticasSi.push({bloque:'Pregunta general', pregunta:q.t});
+    }
+  });
+  // Revisar seguimiento
+  activos.forEach(b=> b.preguntas.forEach(q=>{
+    if(answers.followup[q.id]==='si'){
+      seguimientoSi.push({bloque:b.titulo, pregunta:q.t});
+      if(q.critica) criticasSi.push({bloque:b.titulo, pregunta:q.t});
+    }
+  }));
+
+  // Determinar nivel
+  let nivel;
+  if(criticasSi.length>0){
+    nivel='critico';                                  // ROJO: ve al médico primero
+  } else if(generalesSi.length===0 || seguimientoSi.length===0){
+    nivel='apto';                                     // VERDE: sin banderas o controlado
+  } else {
+    nivel='control';                                  // AMARILLO: evaluar con control de SV
+  }
+
+  mostrarResultado(nivel, {nombre, edad, generalesSi, seguimientoSi, criticasSi});
+}
+
+function showErr(msg){ const e=document.getElementById('errBox'); e.textContent=msg; e.classList.add('show'); e.scrollIntoView({behavior:'smooth',block:'center'}); }
+
+let lastSummary='';
+function mostrarResultado(nivel, data){
+  document.getElementById('formView').style.display='none';
+  const rv=document.getElementById('resultView'); rv.classList.add('show');
+  const banner=document.getElementById('resultBanner');
+  const fecha=document.getElementById('pFecha').value || new Date().toLocaleDateString('es-CL');
+  const fono=document.getElementById('pFono').value.trim();
+
+  if(nivel==='apto'){
+    banner.className='result-banner apto';
+    document.getElementById('resultIcon').textContent='✓';
+    document.getElementById('resultTitle').textContent='Apto para la evaluación';
+    document.getElementById('resultSub').textContent='No se identificaron banderas que requieran atención especial. Puede continuar con la evaluación funcional.';
+  } else if(nivel==='control'){
+    banner.className='result-banner control';
+    document.getElementById('resultIcon').textContent='◐';
+    document.getElementById('resultTitle').textContent='Apto controlando signos vitales';
+    document.getElementById('resultSub').textContent='Declaró condiciones que requieren control de signos vitales. La evaluación puede realizarse si los signos vitales de reposo están dentro de rango; si están comprometidos, no se inicia. Envíe este resumen al médico del deporte para revisión.';
+  } else {
+    banner.className='result-banner critico';
+    document.getElementById('resultIcon').textContent='⚠';
+    document.getElementById('resultTitle').textContent='Requiere revisión médica previa';
+    document.getElementById('resultSub').textContent='Presenta una condición crítica. NO inicie la evaluación: el paciente debe ser revisado por el médico del deporte de HEAL antes de cualquier prueba. Envíe este resumen al médico.';
+  }
+
+  const nivelTxt = nivel==='apto'?'APTO':(nivel==='control'?'APTO CON CONTROL DE SIGNOS VITALES':'REQUIERE REVISIÓN MÉDICA PREVIA');
+  const nivelColor = nivel==='apto'?'#1B8A4B':(nivel==='control'?'#C87A00':'#B71C1C');
+
+  // Resumen
+  const sd=document.getElementById('summaryData');
+  let rows=`
+    <div class="sum-row"><span class="k">Nombre</span><span class="v">${esc(data.nombre)}</span></div>
+    <div class="sum-row"><span class="k">Edad</span><span class="v">${esc(data.edad)} años</span></div>
+    <div class="sum-row"><span class="k">Fecha</span><span class="v">${esc(fecha)}</span></div>
+    ${fono?`<div class="sum-row"><span class="k">Teléfono</span><span class="v">${esc(fono)}</span></div>`:''}
+    <div class="sum-row"><span class="k">Resultado</span><span class="v" style="color:${nivelColor}">${nivelTxt}</span></div>
+  `;
+  sd.innerHTML=rows;
+
+  // Banderas
+  const fs=document.getElementById('flagsSection');
+  let fhtml='';
+  // Banderas críticas primero (si las hay)
+  if(data.criticasSi.length){
+    fhtml+='<h3 style="margin-bottom:10px;color:var(--red)">⚠ Banderas críticas — ver médico antes de evaluar</h3>';
+    data.criticasSi.forEach(f=>{
+      fhtml+=`<div class="flag"><span class="fq">${esc(f.bloque)}:</span> ${esc(shortQ(f.pregunta))}</div>`;
+    });
+  }
+  // Condiciones declaradas (generales SÍ)
+  if(data.generalesSi.length){
+    fhtml+='<h3 style="margin:14px 0 10px">Condiciones declaradas</h3>';
+    data.generalesSi.forEach(q=>{
+      const det=answers.generalDetail[q.id];
+      fhtml+=`<div class="flag" style="background:var(--blue-p);border-color:var(--blue)"><span class="fq" style="color:var(--blue)">Pregunta ${q.id.replace('g','')}:</span> ${esc(shortQ(q.t))}${det?` <em>— ${esc(det)}</em>`:''}</div>`;
+    });
+  }
+  // Banderas no críticas de seguimiento (que motivan control, no derivación)
+  const noCriticas = data.seguimientoSi.filter(f=> !data.criticasSi.some(c=> c.pregunta===f.pregunta));
+  if(noCriticas.length){
+    const titulo = nivel==='control' ? 'Banderas que requieren control de signos vitales' : 'Respuestas de seguimiento positivas';
+    fhtml+=`<h3 style="margin:14px 0 10px;color:var(--amber)">${titulo}</h3>`;
+    noCriticas.forEach(f=>{
+      fhtml+=`<div class="flag" style="background:var(--amber-l);border-color:var(--amber)"><span class="fq" style="color:var(--amber)">${esc(f.bloque)}:</span> ${esc(shortQ(f.pregunta))}</div>`;
+    });
+  }
+  if(nivel==='apto' && data.generalesSi.length && !data.seguimientoSi.length){
+    fhtml+='<div class="noflag" style="margin-top:12px">✓ Declaró condiciones, pero todas se encuentran controladas/tratadas según sus respuestas de seguimiento. Sin banderas.</div>';
+  } else if(nivel==='apto' && !data.generalesSi.length){
+    fhtml+='<div class="noflag">✓ Respondió NO a todas las preguntas generales. Sin condiciones que reportar.</div>';
+  }
+  // Recordatorio de signos vitales para nivel control
+  if(nivel==='control'){
+    fhtml+='<div class="flag" style="background:var(--amber-l);border-color:var(--amber);margin-top:14px"><span class="fq" style="color:var(--amber)">Recordatorio:</span> No iniciar si PA ≥180/110, SpO₂ &lt;90%, FC de reposo fuera de 50-100 lpm, o cualquier signo de alarma. Controlar signos vitales antes, durante y después.</div>';
+  }
+  fs.innerHTML=fhtml;
+
+  // Texto plano para copiar
+  buildPlainSummary(nivel, data, fecha, fono);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function shortQ(t){ return t.length>150? t.slice(0,147)+'…' : t; }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function buildPlainSummary(nivel, data, fecha, fono){
+  const nivelTxt = nivel==='apto'?'APTO PARA EVALUACIÓN':(nivel==='control'?'APTO CON CONTROL DE SIGNOS VITALES':'REQUIERE REVISIÓN MÉDICA PREVIA (no iniciar evaluación)');
+  let s=`PAR-Q+ · HEAL Vital 60+\n`;
+  s+=`─────────────────────────\n`;
+  s+=`Nombre: ${data.nombre}\n`;
+  s+=`Edad: ${data.edad} años\n`;
+  s+=`Fecha: ${fecha}\n`;
+  if(fono) s+=`Teléfono: ${fono}\n`;
+  s+=`\nRESULTADO: ${nivelTxt}\n`;
+  if(data.criticasSi.length){
+    s+=`\n⚠ BANDERAS CRÍTICAS (ver médico antes de evaluar):\n`;
+    data.criticasSi.forEach(f=> s+=`  ⚠ [${f.bloque}] ${shortQ(f.pregunta)}\n`);
+  }
+  if(data.generalesSi.length){
+    s+=`\nCondiciones declaradas:\n`;
+    data.generalesSi.forEach(q=>{
+      const det=answers.generalDetail[q.id];
+      s+=`  • (P${q.id.replace('g','')}) ${shortQ(q.t)}${det?` — ${det}`:''}\n`;
+    });
+  }
+  const noCriticas = data.seguimientoSi.filter(f=> !data.criticasSi.some(c=> c.pregunta===f.pregunta));
+  if(noCriticas.length){
+    s+=`\nBanderas que requieren control de signos vitales:\n`;
+    noCriticas.forEach(f=> s+=`  • [${f.bloque}] ${shortQ(f.pregunta)}\n`);
+  }
+  if(nivel==='apto' && data.generalesSi.length && !data.seguimientoSi.length){
+    s+=`\nTodas las condiciones declaradas están controladas/tratadas. Sin banderas.\n`;
+  }
+  if(nivel==='control'){
+    s+=`\nRecordatorio: no iniciar si PA ≥180/110, SpO2 <90%, FC de reposo fuera de 50-100, o signos de alarma. Controlar signos vitales antes, durante y después.\n`;
+  }
+  s+=`\n─────────────────────────\nDocumento confidencial de uso interno.`;
+  lastSummary=s;
+}
+
+function copiarResumen(){
+  navigator.clipboard.writeText(lastSummary).then(()=>{
+    alert('Resumen copiado. Puede pegarlo en un mensaje o correo para el médico del deporte.');
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea'); ta.value=lastSummary; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    alert('Resumen copiado.');
+  });
+}
+
+function reiniciar(){ location.reload(); }
+
+// Fecha por defecto hoy
+document.getElementById('pFecha').valueAsDate = new Date();
+</script>
+</body>
+</html>
