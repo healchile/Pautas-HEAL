@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>HEAL · Bitácora de Entrenamiento</title>
+<meta name="theme-color" content="#1F6F54">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HEAL Bitácora">
+<style>
+  :root{
+    --bg:#F6F5F2;
+    --surface:#FFFFFF;
+    --surface-alt:#EDEBE4;
+    --ink:#1B1F1D;
+    --ink-soft:#6B7570;
+    --ink-faint:#9BA39D;
+    --line:#DEDBD2;
+    --accent:#1F6F54;
+    --accent-ink:#0F3C2C;
+    --accent-soft:#E3EFE8;
+    --data:#C1571F;
+    --data-soft:#F6E5D8;
+    --danger:#B23B3B;
+    --danger-soft:#F6E1DF;
+    --radius-lg:18px;
+    --radius-md:12px;
+    --radius-sm:8px;
+    --shadow:0 1px 2px rgba(27,31,29,0.04), 0 6px 16px rgba(27,31,29,0.06);
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "SF Mono", SFMono-Regular, "Cascadia Mono", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-ui);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #shell{
+    max-width:560px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--bg);
+    position:relative;
+    padding-bottom:96px;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+  input,textarea,select{font-family:inherit;}
+
+  /* ---------- Header ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    background:var(--bg);
+    padding:18px 18px 10px;
+    display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid transparent;
+  }
+  .topbar.scrolled{border-bottom-color:var(--line);}
+  .brand{
+    display:flex; flex-direction:column; gap:1px; flex:1; min-width:0;
+  }
+  .brand .plate-mark{
+    width:30px;height:30px;border-radius:50%;
+    background:var(--accent);
+    display:inline-flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:800;font-size:14px;
+    border:2px solid var(--bg); outline:2px solid var(--accent);
+    flex-shrink:0;
+  }
+  .brand-row{display:flex;align-items:center;gap:10px;}
+  .brand h1{font-size:17px;margin:0;font-weight:800;letter-spacing:-0.01em;}
+  .brand .sub{font-size:12px;color:var(--ink-soft);margin:0;}
+  .icon-btn{
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line); background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer; color:var(--ink); flex-shrink:0;
+  }
+  .icon-btn:active{background:var(--surface-alt);}
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    border-radius:999px; border:none; cursor:pointer;
+    font-weight:700; font-size:14px; padding:12px 18px;
+    transition:transform .05s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line);}
+  .btn-danger{background:var(--danger-soft); color:var(--danger);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:8px 14px;font-size:13px;}
+  .btn[disabled]{opacity:0.4;pointer-events:none;}
+
+  .fab{
+    position:fixed; right:calc(50% - 280px + 18px); bottom:24px; z-index:20;
+    width:56px;height:56px;border-radius:50%;
+    background:var(--accent); color:#fff; border:none;
+    box-shadow:0 8px 20px rgba(31,111,84,0.35);
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px; cursor:pointer;
+  }
+  @media (max-width:596px){
+    .fab{right:20px;}
+  }
+
+  /* ---------- Search ---------- */
+  .search-wrap{padding:8px 18px 4px;}
+  .search-input{
+    width:100%; padding:12px 14px; border-radius:var(--radius-md);
+    border:1px solid var(--line); background:var(--surface);
+    font-size:14px; color:var(--ink);
+  }
+  .search-input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+
+  /* ---------- Cards / lists ---------- */
+  .section{padding:14px 18px;}
+  .section-title{
+    font-size:12px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-faint); font-weight:700; margin:0 0 10px;
+  }
+  .card{
+    background:var(--surface); border-radius:var(--radius-lg);
+    border:1px solid var(--line); padding:14px 16px; margin-bottom:10px;
+    box-shadow:var(--shadow);
+  }
+  .patient-card{
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .patient-card:active{background:var(--surface-alt);}
+  .patient-avatar{
+    width:42px;height:42px;border-radius:50%;
+    background:var(--accent-soft); color:var(--accent-ink);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800; font-size:15px; flex-shrink:0;
+  }
+  .patient-info{flex:1;min-width:0;}
+  .patient-name{font-weight:700; font-size:15px; margin:0 0 2px;}
+  .patient-meta{font-size:12.5px; color:var(--ink-soft); margin:0;}
+  .chevron{color:var(--ink-faint); flex-shrink:0;}
+
+  .empty-state{
+    text-align:center; padding:40px 20px; color:var(--ink-soft);
+  }
+  .empty-state .plate-mark-lg{
+    width:56px;height:56px;border-radius:50%;
+    border:2px solid var(--line); margin:0 auto 14px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-faint); font-size:22px; font-weight:800;
+  }
+  .empty-state p{font-size:14px; margin:0 0 16px; line-height:1.5;}
+
+  /* ---------- Plate badges (signature element) ---------- */
+  .plate{
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:10.5px;
+    letter-spacing:.02em;
+    width:34px;height:34px;border-radius:50%;
+    background:var(--accent); color:#fff;
+    border:2px solid var(--bg); outline:1.5px solid var(--accent);
+    flex-shrink:0;
+  }
+  .plate.plate-outline{
+    background:var(--surface); color:var(--accent);
+    outline:1.5px solid var(--accent);
+  }
+  .plate.plate-lg{width:52px;height:52px;font-size:12px;}
+  .plate-row{display:flex; gap:6px; flex-wrap:wrap;}
+
+  /* ---------- Patient detail header ---------- */
+  .detail-header{
+    padding:14px 18px 0; display:flex; align-items:center; gap:10px;
+  }
+  .detail-title{flex:1; min-width:0;}
+  .detail-title h2{margin:0; font-size:19px; font-weight:800; letter-spacing:-0.01em;}
+  .detail-title .sub{font-size:12.5px; color:var(--ink-soft); margin:2px 0 0;}
+
+  .tabs{
+    display:flex; gap:6px; padding:14px 18px 4px; position:sticky; top:66px; background:var(--bg); z-index:9;
+  }
+  .tab{
+    flex:1; text-align:center; padding:9px 6px; border-radius:999px;
+    font-size:13px; font-weight:700; cursor:pointer; color:var(--ink-soft);
+    border:1px solid var(--line); background:var(--surface);
+  }
+  .tab.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  /* ---------- Exercise entry card ---------- */
+  .ex-card{
+    background:var(--surface); border-radius:var(--radius-lg);
+    border:1px solid var(--line); padding:12px 14px; margin-bottom:10px;
+  }
+  .ex-card-top{display:flex; align-items:flex-start; gap:10px;}
+  .ex-card-name{font-weight:700; font-size:14.5px; margin:0 0 2px; line-height:1.3;}
+  .ex-card-cat{font-size:11.5px; color:var(--ink-soft); margin:0;}
+  .ex-card-actions{display:flex; gap:4px; margin-left:auto; flex-shrink:0;}
+  .mini-icon-btn{
+    width:30px;height:30px;border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); display:flex;align-items:center;justify-content:center;
+    cursor:pointer; color:var(--ink-soft);
+  }
+  .mini-icon-btn:active{background:var(--surface-alt);}
+  .set-chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;}
+  .set-chip{
+    font-family:var(--font-mono); font-size:12px; font-weight:700;
+    background:var(--data-soft); color:var(--data);
+    padding:5px 9px; border-radius:8px;
+  }
+  .set-chip .x{color:var(--ink-faint); font-weight:500; margin:0 2px;}
+
+  /* ---------- Notes ---------- */
+  .notes-box{margin-top:6px;}
+  .notes-box label{font-size:12px; font-weight:700; color:var(--ink-soft); display:block; margin-bottom:6px;}
+  .notes-box textarea{
+    width:100%; min-height:70px; border-radius:var(--radius-md);
+    border:1px solid var(--line); background:var(--surface);
+    padding:10px 12px; font-size:13.5px; color:var(--ink); resize:vertical;
+  }
+  .notes-box textarea:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .save-hint{font-size:11px; color:var(--ink-faint); margin-top:4px;}
+
+  /* ---------- Historial ---------- */
+  .hist-group{margin-bottom:10px;}
+  .hist-header{
+    display:flex; align-items:center; gap:10px; padding:12px 14px;
+    background:var(--surface); border:1px solid var(--line); cursor:pointer;
+    border-radius:var(--radius-lg);
+  }
+  .hist-header.open{border-bottom-left-radius:0; border-bottom-right-radius:0;}
+  .hist-date{font-weight:700; font-size:14px; flex:1;}
+  .hist-count{font-size:12px; color:var(--ink-soft);}
+  .hist-body{
+    border:1px solid var(--line); border-top:none; padding:12px 14px;
+    border-bottom-left-radius:var(--radius-lg); border-bottom-right-radius:var(--radius-lg);
+    background:var(--surface);
+  }
+  .hist-body .ex-card{background:var(--bg);}
+  .hist-note{
+    font-size:13px; color:var(--ink-soft); background:var(--surface-alt);
+    padding:10px 12px; border-radius:var(--radius-md); margin-top:8px; line-height:1.5;
+  }
+  .hist-delete-row{display:flex; justify-content:flex-end; margin-top:10px;}
+
+  /* ---------- Progreso ---------- */
+  .progress-select{
+    width:100%; padding:12px 14px; border-radius:var(--radius-md);
+    border:1px solid var(--line); background:var(--surface); font-size:14px;
+    margin-bottom:14px;
+  }
+  .stat-row{display:flex; gap:10px; margin-bottom:14px;}
+  .stat-box{
+    flex:1; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius-md); padding:12px;
+  }
+  .stat-box .lbl{font-size:11px; color:var(--ink-soft); font-weight:700; text-transform:uppercase; letter-spacing:.04em;}
+  .stat-box .val{font-family:var(--font-mono); font-size:19px; font-weight:800; color:var(--data); margin-top:4px;}
+  .stat-box .sublbl{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+  .chart-wrap{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:14px 10px 6px;
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(27,31,29,0.45);
+    display:none; align-items:flex-end; justify-content:center; z-index:100;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--bg); width:100%; max-width:560px;
+    border-radius:20px 20px 0 0; max-height:88vh; overflow-y:auto;
+    padding:16px 18px calc(20px + env(safe-area-inset-bottom));
+    animation:slideUp .18s ease-out;
+  }
+  @keyframes slideUp{from{transform:translateY(16px); opacity:0.6;} to{transform:translateY(0); opacity:1;}}
+  .modal-header{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .modal-header h3{margin:0; font-size:16px; font-weight:800; flex:1;}
+  .modal-close{
+    width:32px;height:32px;border-radius:50%; border:none; background:var(--surface-alt);
+    display:flex;align-items:center;justify-content:center; cursor:pointer; color:var(--ink-soft);
+  }
+
+  .field{margin-bottom:14px;}
+  .field label{font-size:12.5px; font-weight:700; color:var(--ink-soft); display:block; margin-bottom:6px;}
+  .field input[type=text]{
+    width:100%; padding:12px 14px; border-radius:var(--radius-md);
+    border:1px solid var(--line); background:var(--surface); font-size:15px;
+  }
+  .field input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .hint{font-size:12px; color:var(--ink-faint); margin-top:5px;}
+
+  .cat-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .cat-opt{
+    display:flex; align-items:center; gap:10px; padding:11px 12px;
+    border-radius:var(--radius-md); border:1.5px solid var(--line); background:var(--surface);
+    cursor:pointer;
+  }
+  .cat-opt.selected{border-color:var(--accent); background:var(--accent-soft);}
+  .cat-opt .lbl{font-size:12.5px; font-weight:600; line-height:1.25;}
+
+  .ex-option-list{max-height:260px; overflow-y:auto; margin-bottom:10px;}
+  .ex-option{
+    padding:12px 14px; border-radius:var(--radius-md); border:1px solid var(--line);
+    background:var(--surface); margin-bottom:7px; cursor:pointer; font-size:14px; font-weight:600;
+  }
+  .ex-option:active{background:var(--surface-alt);}
+  .add-custom-row{display:flex; gap:8px; margin-top:8px;}
+  .add-custom-row input{flex:1;}
+
+  .set-row{
+    display:flex; align-items:center; gap:8px; margin-bottom:8px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
+    padding:8px 10px;
+  }
+  .set-row .set-num{
+    font-family:var(--font-mono); font-weight:800; font-size:12px; color:var(--ink-faint);
+    width:22px; text-align:center; flex-shrink:0;
+  }
+  .set-row .set-field{flex:1;}
+  .set-row .set-field label{display:block; font-size:10.5px; color:var(--ink-faint); margin-bottom:3px; font-weight:700;}
+  .set-row input{
+    width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--line);
+    font-size:14px; font-family:var(--font-mono); background:var(--bg);
+  }
+  .set-row input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .set-row .rm-set{
+    width:28px;height:28px;border-radius:50%; border:none; background:var(--danger-soft);
+    color:var(--danger); display:flex;align-items:center;justify-content:center; cursor:pointer; flex-shrink:0;
+  }
+
+  .modal-footer{display:flex; gap:10px; margin-top:6px; padding-top:6px;}
+  .back-link{display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; margin-bottom:12px;}
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; left:50%; bottom:28px; transform:translate(-50%, 20px);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:all .2s ease; z-index:200;
+  }
+  #toast.show{opacity:1; transform:translate(-50%, 0);}
+
+  /* ---------- Menu ---------- */
+  .menu-overlay{
+    position:fixed; inset:0; z-index:99; display:none;
+  }
+  .menu-overlay.show{display:block;}
+  .menu-panel{
+    position:absolute; right:18px; top:60px; background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow);
+    overflow:hidden; min-width:200px;
+  }
+  .menu-item{
+    padding:12px 16px; font-size:13.5px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; gap:10px; color:var(--ink);
+  }
+  .menu-item:active{background:var(--surface-alt);}
+  .menu-item.danger{color:var(--danger);}
+  .menu-sep{height:1px; background:var(--line);}
+
+  ::selection{background:var(--accent-soft);}
+  input:focus-visible, textarea:focus-visible, button:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+</style>
+</head>
+<body>
+  <div id="shell">
+    <div id="app"></div>
+  </div>
+
+  <div class="overlay" id="modalOverlay">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <div class="menu-overlay" id="menuOverlay" onclick="closeMenu(event)">
+    <div class="menu-panel" id="menuPanel"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <input type="file" id="importFile" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+
+<script>
+/* =========================================================
+   DATA / STORAGE
+   ========================================================= */
+const LS_PATIENTS = 'heal_btr_patients';
+const LS_SESSIONS = 'heal_btr_sessions';
+const LS_CUSTOM   = 'heal_btr_custom_ex';
+
+const CATEGORIES = [
+  { key:'tse', code:'TSE', label:'Tren superior · Empuje' },
+  { key:'tst', code:'TST', label:'Tren superior · Tracción' },
+  { key:'tsc', code:'TSC', label:'Tren superior · Complementario' },
+  { key:'tia', code:'TIA', label:'Tren inferior · Cadena anterior' },
+  { key:'tip', code:'TIP', label:'Tren inferior · Cadena posterior' },
+  { key:'tic', code:'TIC', label:'Tren inferior · Complementario' },
+  { key:'cor', code:'COR', label:'CORE' }
+];
+
+const DEFAULT_EXERCISES = {
+  tse: ['Press banca','Press militar','Press inclinado con mancuernas','Fondos en paralelas','Press de mancuernas','Flexiones de brazos'],
+  tst: ['Remo con barra','Dominadas','Jalón al pecho','Remo unilateral','Remo invertido','Face pull'],
+  tsc: ['Elevaciones laterales','Curl de bíceps','Extensión de tríceps','Elevación frontal','Encogimientos de hombros'],
+  tia: ['Sentadilla','Prensa de piernas','Zancada','Step up','Sentadilla búlgara','Extensión de rodilla'],
+  tip: ['Peso muerto','Peso muerto rumano','Hip thrust','Curl femoral','Puente de glúteo'],
+  tic: ['Elevación de talones (gemelos)','Abducción de cadera','Aducción de cadera','Estocada lateral'],
+  cor: ['Plancha','Dead bug','Pallof press','Bird dog','Elevación de piernas','Rueda abdominal']
+};
+
+function catByKey(k){ return CATEGORIES.find(c=>c.key===k); }
+
+function getPatients(){ return JSON.parse(localStorage.getItem(LS_PATIENTS) || '[]'); }
+function savePatients(list){ localStorage.setItem(LS_PATIENTS, JSON.stringify(list)); }
+
+function getSessions(){ return JSON.parse(localStorage.getItem(LS_SESSIONS) || '[]'); }
+function saveSessions(list){ localStorage.setItem(LS_SESSIONS, JSON.stringify(list)); }
+
+function getCustomEx(){ return JSON.parse(localStorage.getItem(LS_CUSTOM) || '{}'); }
+function saveCustomEx(obj){ localStorage.setItem(LS_CUSTOM, JSON.stringify(obj)); }
+
+function exercisesFor(catKey){
+  const custom = getCustomEx()[catKey] || [];
+  return [...(DEFAULT_EXERCISES[catKey]||[]), ...custom];
+}
+function addCustomExercise(catKey, name){
+  const custom = getCustomEx();
+  if(!custom[catKey]) custom[catKey] = [];
+  if(!custom[catKey].some(n=>n.toLowerCase()===name.toLowerCase()) &&
+     !(DEFAULT_EXERCISES[catKey]||[]).some(n=>n.toLowerCase()===name.toLowerCase())){
+    custom[catKey].push(name);
+    saveCustomEx(custom);
+  }
+}
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function todayISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function formatDateHuman(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' });
+}
+function initials(name){
+  const parts = name.trim().split(/\s+/);
+  if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+/* =========================================================
+   APP STATE
+   ========================================================= */
+const app = { screen:'home', patientId:null, tab:'hoy', openHist:{} };
+const modalState = { mode:null, step:1, category:null, exerciseName:null, sets:[{reps:'',weight:''}], editSessionId:null, editExerciseId:null, patientId:null };
+
+const root = document.getElementById('app');
+
+function render(){
+  if(app.screen === 'home') root.innerHTML = renderHome();
+  else if(app.screen === 'patient') root.innerHTML = renderPatientScreen(app.patientId);
+  afterRender();
+}
+
+function afterRender(){
+  if(app.screen === 'patient' && app.tab === 'progreso') setupProgressChart();
+}
+
+/* =========================================================
+   HOME SCREEN
+   ========================================================= */
+function renderHome(){
+  const patients = getPatients();
+  return `
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-row">
+          <div class="plate-mark">H</div>
+          <div>
+            <h1>HEAL Bitácora</h1>
+            <p class="sub">Registro de entrenamiento por paciente</p>
+          </div>
+        </div>
+      </div>
+      <div class="icon-btn" onclick="openMenu(event,'home')" aria-label="Más opciones">${iconDots()}</div>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" id="patientSearch" type="text" placeholder="Buscar paciente por nombre…" oninput="filterPatients()">
+    </div>
+    <div class="section" style="padding-top:6px;">
+      <div id="patientList">${renderPatientCards(patients)}</div>
+    </div>
+    <button class="fab" onclick="openNewPatientModal()" aria-label="Nuevo paciente">${iconPlus()}</button>
+  `;
+}
+
+function renderPatientCards(patients){
+  if(patients.length===0){
+    return `
+      <div class="empty-state">
+        <div class="plate-mark-lg">+</div>
+        <p>Aún no registras pacientes.<br>Crea el primero para empezar a registrar sesiones.</p>
+        <button class="btn btn-primary" onclick="openNewPatientModal()">Nuevo paciente</button>
+      </div>`;
+  }
+  const sessions = getSessions();
+  const sorted = [...patients].sort((a,b)=>{
+    const la = lastSessionDate(a.id, sessions), lb = lastSessionDate(b.id, sessions);
+    if(la && lb) return lb.localeCompare(la);
+    if(la) return -1;
+    if(lb) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  return sorted.map(p=>{
+    const last = lastSession(p.id, sessions);
+    const meta = last ? `Última sesión: ${formatDateHuman(last.date)}` : 'Sin sesiones registradas';
+    const cats = last ? [...new Set(last.exercises.map(e=>e.category))].slice(0,5) : [];
+    return `
+      <div class="card patient-card" onclick="openPatient('${p.id}')">
+        <div class="patient-avatar">${initials(p.name)}</div>
+        <div class="patient-info">
+          <p class="patient-name">${escapeHtml(p.name)}</p>
+          <p class="patient-meta">${meta}</p>
+          ${cats.length ? `<div class="plate-row" style="margin-top:6px;">${cats.map(c=>`<span class="plate plate-outline" style="width:24px;height:24px;font-size:8.5px;">${catByKey(c).code}</span>`).join('')}</div>` : ''}
+        </div>
+        <div class="chevron">${iconChevron()}</div>
+      </div>`;
+  }).join('');
+}
+
+function filterPatients(){
+  const q = document.getElementById('patientSearch').value.trim().toLowerCase();
+  const patients = getPatients().filter(p=>p.name.toLowerCase().includes(q));
+  document.getElementById('patientList').innerHTML = renderPatientCards(patients);
+}
+
+function lastSession(patientId, sessions){
+  const list = (sessions||getSessions()).filter(s=>s.patientId===patientId).sort((a,b)=>b.date.localeCompare(a.date));
+  return list[0] || null;
+}
+function lastSessionDate(patientId, sessions){
+  const s = lastSession(patientId, sessions);
+  return s ? s.date : null;
+}
+
+/* =========================================================
+   NEW PATIENT
+   ========================================================= */
+function openNewPatientModal(){
+  showModal(`
+    <div class="modal-header">
+      <h3>Nuevo paciente</h3>
+      <button class="modal-close" onclick="closeModal()">${iconClose()}</button>
+    </div>
+    <div class="field">
+      <label>Nombre e inicial de apellido</label>
+      <input type="text" id="newPatientName" placeholder="Ej: Cristián M." autofocus>
+      <p class="hint">Usa solo nombre e inicial de apellido para proteger la identidad del paciente. Si se repite, agrega una variante manual, ej: "Juan P. (2)".</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-block" onclick="saveNewPatient()">Crear paciente</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('newPatientName')?.focus(), 50);
+}
+
+function saveNewPatient(){
+  const input = document.getElementById('newPatientName');
+  const name = input.value.trim();
+  if(!name){ input.focus(); return; }
+  const patients = getPatients();
+  const p = { id: uid(), name, createdAt: todayISO() };
+  patients.push(p);
+  savePatients(patients);
+  closeModal();
+  openPatient(p.id);
+  toast('Paciente creado');
+}
+
+/* =========================================================
+   PATIENT DETAIL SCREEN
+   ========================================================= */
+function openPatient(id){
+  app.screen = 'patient';
+  app.patientId = id;
+  app.tab = 'hoy';
+  render();
+}
+
+function backToHome(){
+  app.screen = 'home';
+  app.patientId = null;
+  render();
+}
+
+function renderPatientScreen(id){
+  const patient = getPatients().find(p=>p.id===id);
+  if(!patient) return `<div class="section">Paciente no encontrado. <button class="btn btn-ghost" onclick="backToHome()">Volver</button></div>`;
+  const sessions = getSessions().filter(s=>s.patientId===id).sort((a,b)=>b.date.localeCompare(a.date));
+
+  let body = '';
+  if(app.tab==='hoy') body = renderHoyTab(patient, sessions);
+  else if(app.tab==='historial') body = renderHistorialTab(patient, sessions);
+  else if(app.tab==='progreso') body = renderProgresoTab(patient, sessions);
+
+  return `
+    <div class="detail-header">
+      <div class="icon-btn" onclick="backToHome()" aria-label="Volver">${iconBack()}</div>
+      <div class="detail-title">
+        <h2>${escapeHtml(patient.name)}</h2>
+        <p class="sub">${sessions.length} sesión${sessions.length===1?'':'es'} registrada${sessions.length===1?'':'s'}</p>
+      </div>
+      <div class="icon-btn" onclick="openMenu(event,'patient')" aria-label="Más opciones">${iconDots()}</div>
+    </div>
+    <div class="tabs">
+      <div class="tab ${app.tab==='hoy'?'active':''}" onclick="switchTab('hoy')">Hoy</div>
+      <div class="tab ${app.tab==='historial'?'active':''}" onclick="switchTab('historial')">Historial</div>
+      <div class="tab ${app.tab==='progreso'?'active':''}" onclick="switchTab('progreso')">Progreso</div>
+    </div>
+    <div class="section" style="padding-top:8px;">${body}</div>
+  `;
+}
+
+function switchTab(tab){
+  app.tab = tab;
+  render();
+}
+
+/* ---------- HOY ---------- */
+function getOrCreateTodaySession(patientId){
+  const sessions = getSessions();
+  let s = sessions.find(s=>s.patientId===patientId && s.date===todayISO());
+  if(!s){
+    s = { id: uid(), patientId, date: todayISO(), notes:'', exercises:[] };
+    sessions.push(s);
+    saveSessions(sessions);
+  }
+  return s;
+}
+
+function renderHoyTab(patient, sessions){
+  const today = sessions.find(s=>s.date===todayISO());
+  const exercises = today ? today.exercises : [];
+  return `
+    <p class="section-title" style="margin-bottom:6px;">Hoy · ${formatDateHuman(todayISO())}</p>
+    ${exercises.length===0 ? `
+      <div class="empty-state" style="padding:28px 10px;">
+        <div class="plate-mark-lg">${iconDumbbellSmall()}</div>
+        <p>Aún no registras ejercicios para la sesión de hoy.</p>
+        <button class="btn btn-primary" onclick="openAddExerciseModal('${patient.id}')">Agregar ejercicio</button>
+      </div>
+    ` : `
+      <div id="todayExList">${exercises.map(e=>renderExCard(e, today.id)).join('')}</div>
+      <button class="btn btn-primary btn-block" onclick="openAddExerciseModal('${patient.id}')" style="margin:6px 0 18px;">+ Agregar ejercicio</button>
+    `}
+    <div class="notes-box">
+      <label>Observaciones de la sesión</label>
+      <textarea id="todayNotes" placeholder="Ej: tolerancia, dolor referido, técnica a corregir…" oninput="saveTodayNotes('${patient.id}')">${today ? escapeHtml(today.notes||'') : ''}</textarea>
+      <p class="save-hint">Se guarda automáticamente.</p>
+    </div>
+  `;
+}
+
+function saveTodayNotes(patientId){
+  const s = getOrCreateTodaySession(patientId);
+  const sessions = getSessions();
+  const idx = sessions.findIndex(x=>x.id===s.id);
+  sessions[idx].notes = document.getElementById('todayNotes').value;
+  saveSessions(sessions);
+}
+
+function renderExCard(ex, sessionId){
+  const cat = catByKey(ex.category);
+  return `
+    <div class="ex-card">
+      <div class="ex-card-top">
+        <span class="plate">${cat.code}</span>
+        <div style="flex:1;min-width:0;">
+          <p class="ex-card-name">${escapeHtml(ex.name)}</p>
+          <p class="ex-card-cat">${cat.label}</p>
+        </div>
+        <div class="ex-card-actions">
+          <div class="mini-icon-btn" onclick="openEditExerciseModal('${sessionId}','${ex.id}')" aria-label="Editar">${iconPencil()}</div>
+          <div class="mini-icon-btn" onclick="deleteExercise('${sessionId}','${ex.id}')" aria-label="Eliminar">${iconTrash()}</div>
+        </div>
+      </div>
+      <div class="set-chips">
+        ${ex.sets.map((s,i)=>`<span class="set-chip">${s.reps}<span class="x">×</span>${s.weight!==''&&s.weight!==null&&s.weight!==undefined ? s.weight+'kg' : '—'}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function deleteExercise(sessionId, exId){
+  if(!confirm('¿Eliminar este ejercicio de la sesión?')) return;
+  const sessions = getSessions();
+  const idx = sessions.findIndex(s=>s.id===sessionId);
+  if(idx===-1) return;
+  sessions[idx].exercises = sessions[idx].exercises.filter(e=>e.id!==exId);
+  saveSessions(sessions);
+  render();
+  toast('Ejercicio eliminado');
+}
+
+/* ---------- HISTORIAL ---------- */
+function renderHistorialTab(patient, sessions){
+  const list = sessions.filter(s => s.date !== todayISO());
+  if(list.length===0){
+    return `
+      <div class="empty-state" style="padding:28px 10px;">
+        <div class="plate-mark-lg">${iconClock()}</div>
+        <p>Todavía no hay sesiones anteriores registradas para este paciente.</p>
+      </div>`;
+  }
+  return list.map(s=>{
+    const open = !!app.openHist[s.id];
+    return `
+      <div class="hist-group">
+        <div class="hist-header ${open?'open':''}" onclick="toggleHist('${s.id}')">
+          <span>${iconChevronDown(open)}</span>
+          <span class="hist-date">${formatDateHuman(s.date)}</span>
+          <span class="hist-count">${s.exercises.length} ejercicio${s.exercises.length===1?'':'s'}</span>
+        </div>
+        ${open ? `
+          <div class="hist-body">
+            ${s.exercises.length ? s.exercises.map(e=>renderExCard(e, s.id)).join('') : '<p style="font-size:13px;color:var(--ink-soft);">Sin ejercicios registrados.</p>'}
+            ${s.notes ? `<div class="hist-note">${escapeHtml(s.notes)}</div>` : ''}
+            <div class="hist-delete-row">
+              <button class="btn btn-danger btn-sm" onclick="deleteSession('${s.id}')">Eliminar sesión</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleHist(id){
+  app.openHist[id] = !app.openHist[id];
+  render();
+}
+
+function deleteSession(sessionId){
+  if(!confirm('¿Eliminar esta sesión completa? Esta acción no se puede deshacer.')) return;
+  let sessions = getSessions();
+  sessions = sessions.filter(s=>s.id!==sessionId);
+  saveSessions(sessions);
+  render();
+  toast('Sesión eliminada');
+}
+
+/* ---------- PROGRESO ---------- */
+function uniqueExercisesForPatient(sessions){
+  const map = new Map();
+  sessions.forEach(s=>s.exercises.forEach(e=>{
+    const key = e.category+'|'+e.name.toLowerCase();
+    if(!map.has(key)) map.set(key, { category:e.category, name:e.name });
+  }));
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function renderProgresoTab(patient, sessions){
+  const options = uniqueExercisesForPatient(sessions);
+  if(options.length===0){
+    return `
+      <div class="empty-state" style="padding:28px 10px;">
+        <div class="plate-mark-lg">${iconChart()}</div>
+        <p>Aún no hay ejercicios registrados para mostrar progresión.</p>
+      </div>`;
+  }
+  return `
+    <select class="progress-select" id="progressExSelect" onchange="setupProgressChart()">
+      ${options.map((o,i)=>`<option value="${i}">${escapeHtml(o.name)} · ${catByKey(o.category).code}</option>`).join('')}
+    </select>
+    <div id="progressStats"></div>
+    <div class="chart-wrap"><canvas id="progressCanvas" height="220" style="width:100%;display:block;"></canvas></div>
+    <p class="hint" id="progressHint" style="margin-top:10px;"></p>
+  `;
+}
+
+function setupProgressChart(){
+  const sel = document.getElementById('progressExSelect');
+  if(!sel) return;
+  const patientId = app.patientId;
+  const sessions = getSessions().filter(s=>s.patientId===patientId).sort((a,b)=>a.date.localeCompare(b.date));
+  const options = uniqueExercisesForPatient(sessions);
+  const chosen = options[parseInt(sel.value,10)];
+  if(!chosen) return;
+
+  const points = [];
+  let usedMetric = null;
+  sessions.forEach(s=>{
+    const matches = s.exercises.filter(e=>e.category===chosen.category && e.name.toLowerCase()===chosen.name.toLowerCase());
+    if(matches.length===0) return;
+    let allSets = [];
+    matches.forEach(m=>allSets = allSets.concat(m.sets));
+    const weights = allSets.map(x=>parseFloat(x.weight)).filter(n=>!isNaN(n) && n>0);
+    if(weights.length){
+      points.push({ date:s.date, value: Math.max(...weights), metric:'kg' });
+    } else {
+      const reps = allSets.map(x=>parseFloat(x.reps)).filter(n=>!isNaN(n) && n>0);
+      if(reps.length) points.push({ date:s.date, value: Math.max(...reps), metric:'reps' });
+    }
+  });
+
+  if(points.length){
+    usedMetric = points.some(p=>p.metric==='kg') ? 'kg' : 'reps';
+  }
+  const filtered = points.filter(p=>p.metric===usedMetric);
+
+  const statsEl = document.getElementById('progressStats');
+  const hintEl = document.getElementById('progressHint');
+  if(filtered.length<1){
+    statsEl.innerHTML = '';
+    hintEl.textContent = 'No hay datos suficientes para graficar este ejercicio.';
+    drawChart([]);
+    return;
+  }
+  const last = filtered[filtered.length-1];
+  const best = filtered.reduce((a,b)=>b.value>a.value?b:a, filtered[0]);
+  const metricLabel = usedMetric==='kg' ? 'kg' : 'reps (peso corporal)';
+  statsEl.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="lbl">Último registro</div>
+        <div class="val">${last.value}${usedMetric==='kg'?' kg':' reps'}</div>
+        <div class="sublbl">${formatDateHuman(last.date)}</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">Mejor registro</div>
+        <div class="val">${best.value}${usedMetric==='kg'?' kg':' reps'}</div>
+        <div class="sublbl">${formatDateHuman(best.date)}</div>
+      </div>
+    </div>`;
+  hintEl.textContent = filtered.length<2
+    ? `Se necesita al menos una sesión más con este ejercicio para ver la tendencia. Mostrando ${metricLabel} por sesión.`
+    : `Mostrando la carga más alta (${metricLabel}) registrada por sesión.`;
+  drawChart(filtered);
+}
+
+function drawChart(points){
+  const canvas = document.getElementById('progressCanvas');
+  if(!canvas) return;
+  const wrap = canvas.parentElement;
+  const cssWidth = wrap.clientWidth - 20;
+  const cssHeight = 200;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  canvas.style.width = cssWidth+'px';
+  canvas.style.height = cssHeight+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,cssWidth,cssHeight);
+
+  const styles = getComputedStyle(document.documentElement);
+  const inkSoft = styles.getPropertyValue('--ink-faint').trim() || '#9BA39D';
+  const line = styles.getPropertyValue('--line').trim() || '#DEDBD2';
+  const data = styles.getPropertyValue('--data').trim() || '#C1571F';
+  const dataSoft = styles.getPropertyValue('--data-soft').trim() || '#F6E5D8';
+
+  if(points.length===0){
+    ctx.fillStyle = inkSoft;
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.fillText('Sin datos para graficar todavía', 10, cssHeight/2);
+    return;
+  }
+
+  const padL = 34, padR = 12, padT = 14, padB = 26;
+  const plotW = cssWidth - padL - padR;
+  const plotH = cssHeight - padT - padB;
+
+  const values = points.map(p=>p.value);
+  let minV = Math.min(...values), maxV = Math.max(...values);
+  if(minV === maxV){ minV = minV - 1; maxV = maxV + 1; }
+  const pad = (maxV-minV)*0.15;
+  minV -= pad; maxV += pad;
+  if(minV<0) minV=0;
+
+  // gridlines + y labels
+  ctx.strokeStyle = line;
+  ctx.fillStyle = inkSoft;
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.lineWidth = 1;
+  const ySteps = 4;
+  for(let i=0;i<=ySteps;i++){
+    const v = minV + (maxV-minV)*(i/ySteps);
+    const y = padT + plotH - (plotH*(i/ySteps));
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(cssWidth-padR, y);
+    ctx.stroke();
+    ctx.fillText(Math.round(v).toString(), 2, y+3);
+  }
+
+  const xStep = points.length>1 ? plotW/(points.length-1) : 0;
+  const coords = points.map((p,i)=>{
+    const x = points.length>1 ? padL + i*xStep : padL + plotW/2;
+    const y = padT + plotH - ((p.value-minV)/(maxV-minV))*plotH;
+    return {x,y,p};
+  });
+
+  // area fill
+  if(coords.length>1){
+    ctx.beginPath();
+    ctx.moveTo(coords[0].x, padT+plotH);
+    coords.forEach(c=>ctx.lineTo(c.x,c.y));
+    ctx.lineTo(coords[coords.length-1].x, padT+plotH);
+    ctx.closePath();
+    ctx.fillStyle = dataSoft;
+    ctx.fill();
+  }
+
+  // line
+  ctx.beginPath();
+  coords.forEach((c,i)=> i===0 ? ctx.moveTo(c.x,c.y) : ctx.lineTo(c.x,c.y));
+  ctx.strokeStyle = data;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // dots + x labels
+  ctx.font = '9.5px -apple-system, sans-serif';
+  coords.forEach((c,i)=>{
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 4, 0, Math.PI*2);
+    ctx.fillStyle = data;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 2, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+
+    if(points.length<=8 || i===0 || i===coords.length-1 || i%Math.ceil(points.length/6)===0){
+      const d = new Date(c.p.date+'T00:00:00');
+      const lbl = d.toLocaleDateString('es',{day:'2-digit',month:'2-digit'});
+      ctx.fillStyle = inkSoft;
+      ctx.textAlign = 'center';
+      ctx.fillText(lbl, c.x, cssHeight-8);
+      ctx.textAlign = 'left';
+    }
+  });
+}
+
+window.addEventListener('resize', ()=>{ if(app.screen==='patient' && app.tab==='progreso') setupProgressChart(); });
+
+/* =========================================================
+   ADD / EDIT EXERCISE MODAL
+   ========================================================= */
+function openAddExerciseModal(patientId){
+  modalState.mode = 'add';
+  modalState.step = 1;
+  modalState.category = null;
+  modalState.exerciseName = null;
+  modalState.sets = [{reps:'',weight:''}];
+  modalState.editSessionId = null;
+  modalState.editExerciseId = null;
+  modalState.patientId = patientId;
+  renderModalStep();
+}
+
+function openEditExerciseModal(sessionId, exId){
+  const sessions = getSessions();
+  const session = sessions.find(s=>s.id===sessionId);
+  const ex = session.exercises.find(e=>e.id===exId);
+  modalState.mode = 'edit';
+  modalState.step = 3;
+  modalState.category = ex.category;
+  modalState.exerciseName = ex.name;
+  modalState.sets = ex.sets.map(s=>({reps:s.reps, weight:s.weight}));
+  modalState.editSessionId = sessionId;
+  modalState.editExerciseId = exId;
+  modalState.patientId = session.patientId;
+  renderModalStep();
+}
+
+function renderModalStep(){
+  let html = '';
+  if(modalState.step===1) html = modalStepCategory();
+  else if(modalState.step===2) html = modalStepExercise();
+  else if(modalState.step===3) html = modalStepSets();
+  showModal(html);
+  if(modalState.step===3) setTimeout(syncSetsRowsFromState, 0);
+}
+
+function modalStepCategory(){
+  return `
+    <div class="modal-header">
+      <h3>${modalState.mode==='edit' ? 'Editar ejercicio' : 'Nuevo ejercicio'} · Categoría</h3>
+      <button class="modal-close" onclick="closeModal()">${iconClose()}</button>
+    </div>
+    <div class="cat-grid">
+      ${CATEGORIES.map(c=>`
+        <div class="cat-opt ${modalState.category===c.key?'selected':''}" onclick="selectCategory('${c.key}')">
+          <span class="plate plate-outline" style="width:28px;height:28px;font-size:9px;">${c.code}</span>
+          <span class="lbl">${c.label}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+function selectCategory(key){
+  modalState.category = key;
+  modalState.step = 2;
+  renderModalStep();
+}
+
+function modalStepExercise(){
+  const list = exercisesFor(modalState.category);
+  return `
+    <div class="back-link" onclick="modalState.step=1;renderModalStep();">${iconBack()} Cambiar categoría</div>
+    <div class="modal-header">
+      <h3>${catByKey(modalState.category).label}</h3>
+      <button class="modal-close" onclick="closeModal()">${iconClose()}</button>
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <input type="text" id="exSearch" placeholder="Buscar ejercicio…" oninput="filterExerciseOptions()">
+    </div>
+    <div class="ex-option-list" id="exOptions">${renderExOptions(list)}</div>
+    <div class="add-custom-row">
+      <input type="text" id="newExName" placeholder="Agregar ejercicio nuevo…">
+      <button class="btn btn-primary btn-sm" onclick="addNewExerciseFromModal()">+ Agregar</button>
+    </div>
+  `;
+}
+function renderExOptions(list){
+  if(list.length===0) return `<p style="font-size:13px;color:var(--ink-soft);">No hay ejercicios en esta categoría todavía.</p>`;
+  return list.map(name=>`<div class="ex-option" onclick="selectExercise('${escapeAttr(name)}')">${escapeHtml(name)}</div>`).join('');
+}
+function filterExerciseOptions(){
+  const q = document.getElementById('exSearch').value.trim().toLowerCase();
+  const list = exercisesFor(modalState.category).filter(n=>n.toLowerCase().includes(q));
+  document.getElementById('exOptions').innerHTML = renderExOptions(list);
+}
+function addNewExerciseFromModal(){
+  const input = document.getElementById('newExName');
+  const name = input.value.trim();
+  if(!name) return;
+  addCustomExercise(modalState.category, name);
+  selectExercise(name);
+}
+function selectExercise(name){
+  modalState.exerciseName = name;
+  modalState.step = 3;
+  if(!modalState.sets || modalState.sets.length===0) modalState.sets = [{reps:'',weight:''}];
+  renderModalStep();
+}
+
+function modalStepSets(){
+  return `
+    <div class="back-link" onclick="modalState.step=2;renderModalStep();">${iconBack()} Cambiar ejercicio</div>
+    <div class="modal-header">
+      <h3>${escapeHtml(modalState.exerciseName)}</h3>
+      <button class="modal-close" onclick="closeModal()">${iconClose()}</button>
+    </div>
+    <p class="ex-card-cat" style="margin:-6px 0 14px;">${catByKey(modalState.category).label}</p>
+    <div id="setsRows"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addSetRow()">+ Agregar serie</button>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-block" onclick="saveExerciseFromModal()">Guardar ejercicio</button>
+    </div>
+  `;
+}
+
+function syncSetsRowsFromState(){
+  const container = document.getElementById('setsRows');
+  if(!container) return;
+  container.innerHTML = '';
+  modalState.sets.forEach((s,i)=>container.appendChild(buildSetRowEl(i,s)));
+  renumberSetRows();
+}
+function buildSetRowEl(index, set){
+  const row = document.createElement('div');
+  row.className = 'set-row';
+  row.dataset.index = index;
+  row.innerHTML = `
+    <span class="set-num">${index+1}</span>
+    <div class="set-field">
+      <label>Repeticiones</label>
+      <input type="number" inputmode="numeric" min="0" class="set-reps" value="${set.reps ?? ''}" placeholder="0">
+    </div>
+    <div class="set-field">
+      <label>Peso (kg, opcional)</label>
+      <input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" value="${set.weight ?? ''}" placeholder="—">
+    </div>
+  `;
+  return row;
+}
+function addSetRow(){
+  const container = document.getElementById('setsRows');
+  const index = container.children.length;
+  container.appendChild(buildSetRowEl(index, {reps:'',weight:''}));
+  renumberSetRows();
+}
+function removeSetRow(btn){
+  const container = document.getElementById('setsRows');
+  if(container.children.length<=1) return;
+  btn.closest('.set-row').remove();
+  renumberSetRows();
+}
+function renumberSetRows(){
+  const rows = document.querySelectorAll('#setsRows .set-row');
+  rows.forEach((r,i)=>{
+    r.dataset.index = i;
+    r.querySelector('.set-num').textContent = i+1;
+    const rm = r.querySelector('.rm-set');
+    if(rows.length<=1 && rm) rm.remove();
+    if(rows.length>1 && !rm){
+      const b = document.createElement('button');
+      b.className='rm-set';
+      b.onclick=function(){removeSetRow(this);};
+      b.innerHTML = iconClose();
+      r.appendChild(b);
+    }
+  });
+}
+
+function saveExerciseFromModal(){
+  const rows = document.querySelectorAll('#setsRows .set-row');
+  const sets = [];
+  let valid = true;
+  rows.forEach(r=>{
+    const reps = r.querySelector('.set-reps').value.trim();
+    const weight = r.querySelector('.set-weight').value.trim();
+    if(reps===''){ valid = false; r.querySelector('.set-reps').focus(); }
+    sets.push({ reps: reps===''?'':Number(reps), weight: weight===''?'':Number(weight) });
+  });
+  if(!valid || sets.length===0){
+    toast('Ingresa al menos las repeticiones de cada serie');
+    return;
+  }
+
+  const sessions = getSessions();
+  if(modalState.mode==='add'){
+    const session = getOrCreateTodaySession(modalState.patientId);
+    const idx = sessions.findIndex(s=>s.id===session.id);
+    sessions[idx].exercises.push({
+      id: uid(), category: modalState.category, name: modalState.exerciseName, sets
+    });
+    saveSessions(sessions);
+  } else {
+    const idx = sessions.findIndex(s=>s.id===modalState.editSessionId);
+    const exIdx = sessions[idx].exercises.findIndex(e=>e.id===modalState.editExerciseId);
+    sessions[idx].exercises[exIdx] = {
+      id: modalState.editExerciseId, category: modalState.category, name: modalState.exerciseName, sets
+    };
+    saveSessions(sessions);
+  }
+  closeModal();
+  render();
+  toast('Ejercicio guardado');
+}
+
+/* =========================================================
+   MODAL / MENU / TOAST HELPERS
+   ========================================================= */
+function showModal(html){
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.getElementById('modalContent').innerHTML = '';
+}
+
+function openMenu(evt, context){
+  evt.stopPropagation();
+  const panel = document.getElementById('menuPanel');
+  if(context==='home'){
+    panel.innerHTML = `
+      <div class="menu-item" onclick="exportData()">${iconDownload()} Exportar datos</div>
+      <div class="menu-item" onclick="document.getElementById('importFile').click(); closeMenu();">${iconUpload()} Importar / restaurar datos</div>
+      ${deferredInstallPrompt ? `<div class="menu-sep"></div><div class="menu-item" onclick="triggerInstall()">${iconDownload()} Instalar en este dispositivo</div>` : ''}
+    `;
+  } else if(context==='patient'){
+    panel.innerHTML = `
+      <div class="menu-item danger" onclick="deletePatientFromMenu()">${iconTrash()} Eliminar paciente</div>
+    `;
+  }
+  document.getElementById('menuOverlay').classList.add('show');
+}
+function closeMenu(evt){
+  if(evt) evt.stopPropagation();
+  document.getElementById('menuOverlay').classList.remove('show');
+}
+
+function deletePatientFromMenu(){
+  const patient = getPatients().find(p=>p.id===app.patientId);
+  if(!confirm(`¿Eliminar a ${patient.name} y todas sus sesiones registradas? Esta acción no se puede deshacer.`)) return;
+  closeMenu();
+  savePatients(getPatients().filter(p=>p.id!==app.patientId));
+  saveSessions(getSessions().filter(s=>s.patientId!==app.patientId));
+  backToHome();
+  toast('Paciente eliminado');
+}
+
+let toastTimer = null;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* =========================================================
+   EXPORT / IMPORT
+   ========================================================= */
+function exportData(){
+  closeMenu();
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    patients: getPatients(),
+    sessions: getSessions(),
+    customExercises: getCustomEx()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `heal-bitacora-backup-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('Respaldo descargado');
+}
+
+function handleImportFile(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data.patients) || !Array.isArray(data.sessions)){
+        alert('El archivo no tiene el formato esperado.');
+        return;
+      }
+      if(!confirm('Esto reemplazará todos los datos actuales por los del archivo importado. ¿Continuar?')) return;
+      savePatients(data.patients);
+      saveSessions(data.sessions);
+      saveCustomEx(data.customExercises || {});
+      app.screen = 'home';
+      render();
+      toast('Datos restaurados correctamente');
+    }catch(e){
+      alert('No se pudo leer el archivo. Verifica que sea un respaldo válido de HEAL Bitácora.');
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+/* =========================================================
+   PWA INSTALL
+   ========================================================= */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+function triggerInstall(){
+  closeMenu();
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(()=>{ deferredInstallPrompt = null; });
+}
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+/* =========================================================
+   ICONS (inline SVG, stroke=currentColor)
+   ========================================================= */
+function iconChevron(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;}
+function iconChevronDown(open){return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="transform:rotate(${open?90:0}deg);transition:transform .15s;"><path d="M9 6l6 6-6 6"/></svg>`;}
+function iconBack(){return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;}
+function iconPlus(){return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;}
+function iconDots(){return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>`;}
+function iconClose(){return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`;}
+function iconPencil(){return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`;}
+function iconTrash(){return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>`;}
+function iconClock(){return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>`;}
+function iconChart(){return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>`;}
+function iconDumbbellSmall(){return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 6.5l11 11M4 9l3-3 2 2-3 3zM15 20l3-3-2-2-3 3zM2 11l2 2M20 11l2 2M11 2l2 2"/></svg>`;}
+function iconDownload(){return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0l-4-4m4 4l4-4"/><path d="M4 19h16"/></svg>`;}
+function iconUpload(){return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V7m0 0l-4 4m4-4l4 4"/><path d="M4 19h16"/></svg>`;}
+
+/* =========================================================
+   UTIL
+   ========================================================= */
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(str){
+  return String(str).replace(/'/g, "\\'");
+}
+
+/* Close menu when clicking outside panel content */
+document.addEventListener('click', (e)=>{
+  const overlay = document.getElementById('menuOverlay');
+  if(overlay.classList.contains('show') && !document.getElementById('menuPanel').contains(e.target)){
+    closeMenu();
+  }
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+render();
+</script>
+</body>
+</html>
