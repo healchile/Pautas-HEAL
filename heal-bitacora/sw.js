@@ -1,10 +1,11 @@
-const CACHE_NAME = "heal-bitacora-v1";
+const CACHE_NAME = "heal-bitacora-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/logo-mark.png"
 ];
 
 self.addEventListener("install", (event) => {

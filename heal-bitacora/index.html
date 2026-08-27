@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#1F6F54">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HEAL Bitácora">
@@ -68,13 +69,10 @@
     display:flex; flex-direction:column; gap:1px; flex:1; min-width:0;
   }
   .brand .plate-mark{
-    width:30px;height:30px;border-radius:50%;
-    background:var(--accent);
+    width:32px;height:32px;flex-shrink:0;
     display:inline-flex;align-items:center;justify-content:center;
-    color:#fff;font-weight:800;font-size:14px;
-    border:2px solid var(--bg); outline:2px solid var(--accent);
-    flex-shrink:0;
   }
+  .brand .plate-mark img{width:100%;height:100%;object-fit:contain;}
   .brand-row{display:flex;align-items:center;gap:10px;}
   .brand h1{font-size:17px;margin:0;font-weight:800;letter-spacing:-0.01em;}
   .brand .sub{font-size:12px;color:var(--ink-soft);margin:0;}
@@ -216,6 +214,10 @@
     padding:5px 9px; border-radius:8px;
   }
   .set-chip .x{color:var(--ink-faint); font-weight:500; margin:0 2px;}
+  .ex-note{
+    font-size:12.5px; color:var(--ink-soft); margin-top:9px; padding-top:9px;
+    border-top:1px dashed var(--line); line-height:1.45;
+  }
 
   /* ---------- Notes ---------- */
   .notes-box{margin-top:6px;}
@@ -296,6 +298,12 @@
     border:1px solid var(--line); background:var(--surface); font-size:15px;
   }
   .field input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .field textarea{
+    width:100%; min-height:56px; border-radius:var(--radius-md);
+    border:1px solid var(--line); background:var(--surface);
+    padding:10px 12px; font-size:13.5px; color:var(--ink); resize:vertical;
+  }
+  .field textarea:focus{outline:2px solid var(--accent); outline-offset:1px;}
   .hint{font-size:12px; color:var(--ink-faint); margin-top:5px;}
 
   .cat-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
@@ -444,6 +452,25 @@ function addCustomExercise(catKey, name){
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
+function normalizeDecimalStr(raw){
+  if(raw===undefined || raw===null) return '';
+  let s = String(raw).trim();
+  if(s==='') return '';
+  s = s.replace(',', '.');
+  s = s.replace(/[^0-9.]/g, '');
+  const parts = s.split('.');
+  if(parts.length>2){ s = parts[0]+'.'+parts.slice(1).join(''); }
+  return s;
+}
+function normalizeWeightInput(el){
+  el.value = normalizeDecimalStr(el.value);
+}
+function formatNumberCL(n){
+  if(n===''||n===null||n===undefined||isNaN(n)) return '';
+  const num = Number(n);
+  return Number.isInteger(num) ? String(num) : String(num).replace('.',',');
+}
+
 function todayISO(){
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -462,7 +489,7 @@ function initials(name){
    APP STATE
    ========================================================= */
 const app = { screen:'home', patientId:null, tab:'hoy', openHist:{} };
-const modalState = { mode:null, step:1, category:null, exerciseName:null, sets:[{reps:'',weight:''}], editSessionId:null, editExerciseId:null, patientId:null };
+const modalState = { mode:null, step:1, category:null, exerciseName:null, sets:[{reps:'',weight:''}], note:'', editSessionId:null, editExerciseId:null, patientId:null };
 
 const root = document.getElementById('app');
 
@@ -485,7 +512,7 @@ function renderHome(){
     <div class="topbar">
       <div class="brand">
         <div class="brand-row">
-          <div class="plate-mark">H</div>
+          <div class="plate-mark"><img src="icons/logo-mark.png" alt="HEAL"></div>
           <div>
             <h1>HEAL Bitácora</h1>
             <p class="sub">Registro de entrenamiento por paciente</p>
@@ -696,8 +723,9 @@ function renderExCard(ex, sessionId){
         </div>
       </div>
       <div class="set-chips">
-        ${ex.sets.map((s,i)=>`<span class="set-chip">${s.reps}<span class="x">×</span>${s.weight!==''&&s.weight!==null&&s.weight!==undefined ? s.weight+'kg' : '—'}</span>`).join('')}
+        ${ex.sets.map((s,i)=>`<span class="set-chip">${s.reps}<span class="x">×</span>${s.weight!==''&&s.weight!==null&&s.weight!==undefined ? formatNumberCL(s.weight)+'kg' : '—'}</span>`).join('')}
       </div>
+      ${ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : ''}
     </div>
   `;
 }
@@ -834,12 +862,12 @@ function setupProgressChart(){
     <div class="stat-row">
       <div class="stat-box">
         <div class="lbl">Último registro</div>
-        <div class="val">${last.value}${usedMetric==='kg'?' kg':' reps'}</div>
+        <div class="val">${formatNumberCL(last.value)}${usedMetric==='kg'?' kg':' reps'}</div>
         <div class="sublbl">${formatDateHuman(last.date)}</div>
       </div>
       <div class="stat-box">
         <div class="lbl">Mejor registro</div>
-        <div class="val">${best.value}${usedMetric==='kg'?' kg':' reps'}</div>
+        <div class="val">${formatNumberCL(best.value)}${usedMetric==='kg'?' kg':' reps'}</div>
         <div class="sublbl">${formatDateHuman(best.date)}</div>
       </div>
     </div>`;
@@ -964,6 +992,7 @@ function openAddExerciseModal(patientId){
   modalState.category = null;
   modalState.exerciseName = null;
   modalState.sets = [{reps:'',weight:''}];
+  modalState.note = '';
   modalState.editSessionId = null;
   modalState.editExerciseId = null;
   modalState.patientId = patientId;
@@ -979,6 +1008,7 @@ function openEditExerciseModal(sessionId, exId){
   modalState.category = ex.category;
   modalState.exerciseName = ex.name;
   modalState.sets = ex.sets.map(s=>({reps:s.reps, weight:s.weight}));
+  modalState.note = ex.note || '';
   modalState.editSessionId = sessionId;
   modalState.editExerciseId = exId;
   modalState.patientId = session.patientId;
@@ -1067,6 +1097,10 @@ function modalStepSets(){
     <p class="ex-card-cat" style="margin:-6px 0 14px;">${catByKey(modalState.category).label}</p>
     <div id="setsRows"></div>
     <button class="btn btn-ghost btn-sm" onclick="addSetRow()">+ Agregar serie</button>
+    <div class="field" style="margin-top:16px;">
+      <label>Nota del ejercicio (opcional)</label>
+      <textarea id="exerciseNote" rows="2" placeholder="Ej: técnica a corregir, dolor referido en la última serie…">${escapeHtml(modalState.note||'')}</textarea>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary btn-block" onclick="saveExerciseFromModal()">Guardar ejercicio</button>
@@ -1093,7 +1127,7 @@ function buildSetRowEl(index, set){
     </div>
     <div class="set-field">
       <label>Peso (kg, opcional)</label>
-      <input type="number" inputmode="decimal" min="0" step="0.5" class="set-weight" value="${set.weight ?? ''}" placeholder="—">
+      <input type="text" inputmode="decimal" class="set-weight" value="${set.weight ?? ''}" placeholder="—" onblur="normalizeWeightInput(this)">
     </div>
   `;
   return row;
@@ -1133,9 +1167,9 @@ function saveExerciseFromModal(){
   let valid = true;
   rows.forEach(r=>{
     const reps = r.querySelector('.set-reps').value.trim();
-    const weight = r.querySelector('.set-weight').value.trim();
+    const weightRaw = normalizeDecimalStr(r.querySelector('.set-weight').value);
     if(reps===''){ valid = false; r.querySelector('.set-reps').focus(); }
-    sets.push({ reps: reps===''?'':Number(reps), weight: weight===''?'':Number(weight) });
+    sets.push({ reps: reps===''?'':Number(reps), weight: weightRaw===''?'':Number(weightRaw) });
   });
   if(!valid || sets.length===0){
     toast('Ingresa al menos las repeticiones de cada serie');
@@ -1143,18 +1177,19 @@ function saveExerciseFromModal(){
   }
 
   const sessions = getSessions();
+  const note = document.getElementById('exerciseNote').value.trim();
   if(modalState.mode==='add'){
     const session = getOrCreateTodaySession(modalState.patientId);
     const idx = sessions.findIndex(s=>s.id===session.id);
     sessions[idx].exercises.push({
-      id: uid(), category: modalState.category, name: modalState.exerciseName, sets
+      id: uid(), category: modalState.category, name: modalState.exerciseName, sets, note
     });
     saveSessions(sessions);
   } else {
     const idx = sessions.findIndex(s=>s.id===modalState.editSessionId);
     const exIdx = sessions[idx].exercises.findIndex(e=>e.id===modalState.editExerciseId);
     sessions[idx].exercises[exIdx] = {
-      id: modalState.editExerciseId, category: modalState.category, name: modalState.exerciseName, sets
+      id: modalState.editExerciseId, category: modalState.category, name: modalState.exerciseName, sets, note
     };
     saveSessions(sessions);
   }
