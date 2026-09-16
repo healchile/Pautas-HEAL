@@ -679,13 +679,17 @@ function getOrCreateTodaySession(patientId){
 function renderHoyTab(patient, sessions){
   const today = sessions.find(s=>s.date===todayISO());
   const exercises = today ? today.exercises : [];
+  const prevSession = sessions.find(s=>s.date!==todayISO() && s.exercises && s.exercises.length>0);
   return `
     <p class="section-title" style="margin-bottom:6px;">Hoy · ${formatDateHuman(todayISO())}</p>
     ${exercises.length===0 ? `
       <div class="empty-state" style="padding:28px 10px;">
         <div class="plate-mark-lg">${iconDumbbellSmall()}</div>
         <p>Aún no registras ejercicios para la sesión de hoy.</p>
-        <button class="btn btn-primary" onclick="openAddExerciseModal('${patient.id}')">Agregar ejercicio</button>
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:stretch;max-width:280px;margin:0 auto;">
+          <button class="btn btn-primary" onclick="openAddExerciseModal('${patient.id}')">Agregar ejercicio</button>
+          ${prevSession ? `<button class="btn btn-ghost" onclick="repeatLastSession('${patient.id}','${prevSession.id}')">Repetir sesión del ${formatDateHuman(prevSession.date)}</button>` : ''}
+        </div>
       </div>
     ` : `
       <div id="todayExList">${exercises.map(e=>renderExCard(e, today.id)).join('')}</div>
@@ -697,6 +701,27 @@ function renderHoyTab(patient, sessions){
       <p class="save-hint">Se guarda automáticamente.</p>
     </div>
   `;
+}
+
+function repeatLastSession(patientId, prevSessionId){
+  const sessions = getSessions();
+  const prev = sessions.find(s=>s.id===prevSessionId);
+  if(!prev) return;
+  if(!confirm(`¿Repetir la sesión del ${formatDateHuman(prev.date)}? Se copiarán los mismos ejercicios y series para que solo ajustes lo necesario.`)) return;
+  const today = getOrCreateTodaySession(patientId);
+  const sessionsNow = getSessions();
+  const idx = sessionsNow.findIndex(s=>s.id===today.id);
+  const copied = prev.exercises.map(e=>({
+    id: uid(),
+    category: e.category,
+    name: e.name,
+    sets: e.sets.map(s=>({ reps: s.reps, weight: s.weight })),
+    note: ''
+  }));
+  sessionsNow[idx].exercises = sessionsNow[idx].exercises.concat(copied);
+  saveSessions(sessionsNow);
+  render();
+  toast('Sesión anterior copiada');
 }
 
 function saveTodayNotes(patientId){
@@ -1097,6 +1122,7 @@ function modalStepSets(){
     <p class="ex-card-cat" style="margin:-6px 0 14px;">${catByKey(modalState.category).label}</p>
     <div id="setsRows"></div>
     <button class="btn btn-ghost btn-sm" onclick="addSetRow()">+ Agregar serie</button>
+    <p class="hint">Cada serie nueva copia reps y peso de la anterior — edítala si esta serie cambia.</p>
     <div class="field" style="margin-top:16px;">
       <label>Nota del ejercicio (opcional)</label>
       <textarea id="exerciseNote" rows="2" placeholder="Ej: técnica a corregir, dolor referido en la última serie…">${escapeHtml(modalState.note||'')}</textarea>
@@ -1135,7 +1161,15 @@ function buildSetRowEl(index, set){
 function addSetRow(){
   const container = document.getElementById('setsRows');
   const index = container.children.length;
-  container.appendChild(buildSetRowEl(index, {reps:'',weight:''}));
+  let prefill = { reps:'', weight:'' };
+  if(container.children.length>0){
+    const lastRow = container.children[container.children.length-1];
+    prefill = {
+      reps: lastRow.querySelector('.set-reps').value.trim(),
+      weight: lastRow.querySelector('.set-weight').value.trim()
+    };
+  }
+  container.appendChild(buildSetRowEl(index, prefill));
   renumberSetRows();
 }
 function removeSetRow(btn){
