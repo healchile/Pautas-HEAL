@@ -214,6 +214,9 @@
     padding:5px 9px; border-radius:8px;
   }
   .set-chip .x{color:var(--ink-faint); font-weight:500; margin:0 2px;}
+  .load-hint{background:var(--accent-soft); border-radius:var(--radius-md); padding:10px 12px; margin-bottom:12px; font-size:13px; line-height:1.4; color:var(--accent-ink);}
+  .load-hint strong{display:block; font-size:14px;}
+  .load-hint span{display:block; font-size:12px; color:var(--ink-soft); margin-top:2px;}
   .ex-note{
     font-size:12.5px; color:var(--ink-soft); margin-top:9px; padding-top:9px;
     border-top:1px dashed var(--line); line-height:1.45;
@@ -356,6 +359,25 @@
   }
   #toast.show{opacity:1; transform:translate(-50%, 0);}
 
+  #updateBanner{
+    position:fixed; left:12px; right:12px;
+    bottom:calc(92px + env(safe-area-inset-bottom));
+    max-width:536px; margin:0 auto;
+    background:var(--accent); color:#fff;
+    border-radius:14px; padding:12px 14px;
+    display:flex; align-items:center; gap:12px;
+    box-shadow:0 8px 20px rgba(31,111,84,0.35);
+    transform:translateY(140%); opacity:0;
+    transition:transform .25s ease, opacity .25s ease;
+    z-index:150; pointer-events:none;
+  }
+  #updateBanner.show{ transform:translateY(0); opacity:1; pointer-events:auto; }
+  #updateBanner .msg{ flex:1; font-size:13.5px; font-weight:600; line-height:1.35; }
+  #updateBanner button{
+    background:#fff; color:var(--accent-ink); border:none; border-radius:999px;
+    padding:9px 16px; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;
+  }
+
   /* ---------- Menu ---------- */
   .menu-overlay{
     position:fixed; inset:0; z-index:99; display:none;
@@ -395,6 +417,11 @@
 
   <div id="toast"></div>
 
+  <div id="updateBanner">
+    <span class="msg">Hay una nueva versión disponible</span>
+    <button onclick="reloadForUpdate()">Actualizar</button>
+  </div>
+
   <input type="file" id="importFile" accept="application/json" style="display:none" onchange="handleImportFile(event)">
 
 <script>
@@ -421,7 +448,7 @@ const DEFAULT_EXERCISES = {
   tsc: ['Elevaciones laterales','Curl de bíceps','Extensión de tríceps','Elevación frontal','Encogimientos de hombros'],
   tia: ['Sentadilla','Prensa de piernas','Zancada','Step up','Sentadilla búlgara','Extensión de rodilla'],
   tip: ['Peso muerto','Peso muerto rumano','Hip thrust','Curl femoral','Puente de glúteo'],
-  tic: ['Elevación de talones (gemelos)','Abducción de cadera','Aducción de cadera','Estocada lateral'],
+  tic: ['Elevación de talones (gemelos)','Elevación unilateral de talón (rodilla extendida)','Sóleo unilateral (rodilla flectada)','Abducción de cadera','Aducción de cadera','Estocada lateral'],
   cor: ['Plancha','Dead bug','Pallof press','Bird dog','Elevación de piernas','Rueda abdominal']
 };
 
@@ -618,6 +645,72 @@ function saveNewPatient(){
 /* =========================================================
    PATIENT DETAIL SCREEN
    ========================================================= */
+/* ---------- Carga sugerida (basada en el Convertidor de cargas HEAL) ---------- */
+const AGE_F = [[40,1.00],[50,0.95],[60,0.88],[70,0.78],[80,0.68],[Infinity,0.58]];
+const ageFactor = a => (AGE_F.find(([l])=>a<l)||[0,1])[1];
+const GOALS_BTR = {
+  early:{t:'Rehab inicial', lo:.20, hi:.40, rx:'2–3 series de 15–25 reps'},
+  rehab:{t:'Rehab', lo:.40, hi:.60, rx:'2–3 series de 10–15 reps'},
+  str:{t:'Fuerza', lo:.70, hi:.85, rx:'3–5 series de 4–8 reps'}
+};
+// Ratios ×PC del 1RM: [hombre [ini,int,avz], mujer [ini,int,avz]]
+const RATIOS = {
+  'Press banca':{v:[[.75,1,1.4],[.45,.65,.9]]},
+  'Press militar':{v:[[.5,.7,.9],[.3,.45,.6]]},
+  'Press de mancuernas':{v:[[.3,.4,.55],[.18,.27,.37]], note:'por mancuerna'},
+  'Remo con barra':{v:[[.65,.9,1.2],[.4,.6,.8]]},
+  'Jalón al pecho':{v:[[.7,.95,1.2],[.45,.65,.85]]},
+  'Remo unilateral':{v:[[.35,.5,.65],[.22,.32,.45]], note:'por mancuerna'},
+  'Sentadilla':{v:[[1,1.5,2],[.75,1.1,1.5]]},
+  'Prensa de piernas':{v:[[1.75,2.5,3.25],[1.5,2,2.75]]},
+  'Sentadilla búlgara':{v:[[.4,.6,.85],[.3,.45,.65]], note:'carga externa total'},
+  'Step up':{v:[[.3,.5,.7],[.2,.35,.5]], note:'carga total'},
+  'Peso muerto':{v:[[1.25,1.75,2.25],[1,1.35,1.75]]},
+  'Peso muerto rumano':{v:[[.9,1.3,1.7],[.7,1,1.35]]},
+  'Hip thrust':{v:[[1.25,1.75,2.5],[1,1.5,2]]},
+  // Tríceps sural: metas de 5 repeticiones (≥1,0×PC rodilla extendida; ≥1,5×PC rodilla flectada; Green y cols. 2022)
+  // convertidas a 1RM (×1,15) y asignadas a nivel Avanzado; otros niveles y sexo femenino derivados (×0,5/×0,75; mujer ×0,75).
+  'Elevación unilateral de talón (rodilla extendida)':{v:[[.6,.85,1.15],[.45,.65,.85]], note:'carga externa'},
+  'Sóleo unilateral (rodilla flectada)':{v:[[.85,1.3,1.75],[.65,1,1.3]], note:'carga externa'}
+};
+function suggestedLoad(patientId, exName){
+  const r = RATIOS[exName]; if(!r) return null;
+  const pt = getPatients().find(p=>p.id===patientId);
+  const pr = pt && pt.profile;
+  if(!pr || !pr.sex || !pr.age || !pr.bw) return {missing:true};
+  const rm = r.v[pr.sex==='F'?1:0][pr.lvl||0] * ageFactor(pr.age) * pr.bw;
+  const G = GOALS_BTR[pr.goal||'rehab'];
+  const h = x => Math.round(x*2)/2;
+  return { lo:h(rm*G.lo), hi:h(rm*G.hi), rm:h(rm), G, note:r.note };
+}
+function loadHintHtml(){
+  const s = suggestedLoad(modalState.patientId, modalState.exerciseName);
+  if(!s) return '';
+  if(s.missing) return `<div class="load-hint"><span>Agrega sexo, edad, peso y nivel del paciente desde el menú ⋯ para ver una carga sugerida.</span></div>`;
+  return `<div class="load-hint"><strong>Carga sugerida: ${formatNumberCL(s.lo)}–${formatNumberCL(s.hi)} kg</strong>${s.note?` (${s.note})`:''}
+    <span>${s.G.t} · ${Math.round(s.G.lo*100)}–${Math.round(s.G.hi*100)}% de 1RM estimado (${formatNumberCL(s.rm)} kg) · ${s.G.rx}</span></div>`;
+}
+function openProfileModal(){
+  const pt = getPatients().find(p=>p.id===app.patientId); const pr = (pt&&pt.profile)||{};
+  const sel = (v,cur)=> v===cur?' selected':'';
+  showModal(`
+    <div class="modal-header"><h3>Datos para carga sugerida</h3><button class="modal-close" onclick="closeModal()">${iconClose()}</button></div>
+    <div class="field"><label>Sexo</label><select id="pfSex" class="progress-select" style="margin:0"><option value="">—</option><option value="M"${sel('M',pr.sex)}>Hombre</option><option value="F"${sel('F',pr.sex)}>Mujer</option></select></div>
+    <div class="field"><label>Edad (años)</label><input type="text" id="pfAge" inputmode="numeric" value="${pr.age||''}"></div>
+    <div class="field"><label>Peso corporal (kg)</label><input type="text" id="pfBw" inputmode="decimal" value="${pr.bw||''}" onblur="normalizeWeightInput(this)"></div>
+    <div class="field"><label>Nivel de entrenamiento</label><select id="pfLvl" class="progress-select" style="margin:0"><option value="0"${sel('0',String(pr.lvl||0))}>Inicial</option><option value="1"${sel('1',String(pr.lvl))}>Intermedio</option><option value="2"${sel('2',String(pr.lvl))}>Avanzado</option></select></div>
+    <div class="field"><label>Objetivo</label><select id="pfGoal" class="progress-select" style="margin:0"><option value="early"${sel('early',pr.goal)}>Rehab inicial</option><option value="rehab"${sel('rehab',pr.goal||'rehab')}>Rehab</option><option value="str"${sel('str',pr.goal)}>Fuerza</option></select></div>
+    <p class="hint">Opcional. Se guarda solo en este dispositivo y se incluye en el respaldo.</p>
+    <div class="modal-footer"><button class="btn btn-ghost btn-block" onclick="closeModal()">Cancelar</button><button class="btn btn-primary btn-block" onclick="saveProfile()">Guardar</button></div>`);
+}
+function saveProfile(){
+  const g = id=>document.getElementById(id).value;
+  const profile = { sex:g('pfSex'), age:parseInt(g('pfAge'),10)||0, bw:Number(normalizeDecimalStr(g('pfBw')))||0, lvl:Number(g('pfLvl')), goal:g('pfGoal') };
+  const list = getPatients(); const i = list.findIndex(p=>p.id===app.patientId);
+  if(i>-1){ list[i].profile = profile; savePatients(list); }
+  closeModal(); toast('Datos guardados');
+}
+
 function openPatient(id){
   app.screen = 'patient';
   app.patientId = id;
@@ -1120,6 +1213,7 @@ function modalStepSets(){
       <button class="modal-close" onclick="closeModal()">${iconClose()}</button>
     </div>
     <p class="ex-card-cat" style="margin:-6px 0 14px;">${catByKey(modalState.category).label}</p>
+    ${loadHintHtml()}
     <div id="setsRows"></div>
     <button class="btn btn-ghost btn-sm" onclick="addSetRow()">+ Agregar serie</button>
     <p class="hint">Cada serie nueva copia reps y peso de la anterior — edítala si esta serie cambia.</p>
@@ -1255,6 +1349,8 @@ function openMenu(evt, context){
     `;
   } else if(context==='patient'){
     panel.innerHTML = `
+      <div class="menu-item" onclick="closeMenu();openProfileModal()">${iconPencil()} Datos para carga sugerida</div>
+      <div class="menu-sep"></div>
       <div class="menu-item danger" onclick="deletePatientFromMenu()">${iconTrash()} Eliminar paciente</div>
     `;
   }
@@ -1350,8 +1446,23 @@ function triggerInstall(){
 }
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      reg.addEventListener('updatefound', ()=>{
+        const newWorker = reg.installing;
+        if(!newWorker) return;
+        newWorker.addEventListener('statechange', ()=>{
+          if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+            document.getElementById('updateBanner').classList.add('show');
+          }
+        });
+      });
+      // Revisa cada cierto tiempo por si la app queda abierta muchas horas seguidas
+      setInterval(()=>{ reg.update().catch(()=>{}); }, 60*60*1000);
+    }).catch(()=>{});
   });
+}
+function reloadForUpdate(){
+  window.location.reload();
 }
 
 /* =========================================================
