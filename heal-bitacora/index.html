@@ -217,6 +217,14 @@
   .load-hint{background:var(--accent-soft); border-radius:var(--radius-md); padding:10px 12px; margin-bottom:12px; font-size:13px; line-height:1.4; color:var(--accent-ink);}
   .load-hint strong{display:block; font-size:14px;}
   .load-hint span{display:block; font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .last-time{background:var(--surface-alt); border-radius:var(--radius-md); padding:9px 12px; margin-bottom:10px; font-size:12.5px; color:var(--ink-soft); line-height:1.4;}
+  .last-time strong{display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); margin-bottom:2px;}
+  .rm-link{display:inline-block; margin-top:6px; font-size:12px; font-weight:700; text-decoration:underline; cursor:pointer; color:var(--accent);}
+  .load-hint.plain{background:none; padding:0; color:var(--ink-soft); font-size:12px;}
+  .meta-chip{font-size:11.5px; font-weight:700; padding:4px 9px; border-radius:8px; background:var(--surface-alt); color:var(--ink-soft);}
+  .meta-chip.pain{background:var(--danger-soft); color:var(--danger);}
+  .reminder{margin:8px 18px 0; background:var(--data-soft); border-radius:var(--radius-md); padding:12px 14px; font-size:13px; line-height:1.45;}
+  .reminder .row{display:flex; gap:8px; margin-top:10px;}
   .ex-note{
     font-size:12.5px; color:var(--ink-soft); margin-top:9px; padding-top:9px;
     border-top:1px dashed var(--line); line-height:1.45;
@@ -431,6 +439,7 @@
 const LS_PATIENTS = 'heal_btr_patients';
 const LS_SESSIONS = 'heal_btr_sessions';
 const LS_CUSTOM   = 'heal_btr_custom_ex';
+const LS_EXPORT='heal_btr_last_export', LS_SEEN='heal_btr_first_seen', LS_SNOOZE='heal_btr_snooze';
 
 const CATEGORIES = [
   { key:'tse', code:'TSE', label:'Tren superior · Empuje' },
@@ -492,6 +501,7 @@ function normalizeDecimalStr(raw){
 function normalizeWeightInput(el){
   el.value = normalizeDecimalStr(el.value);
 }
+const has = v => v!=='' && v!==null && v!==undefined;
 function formatNumberCL(n){
   if(n===''||n===null||n===undefined||isNaN(n)) return '';
   const num = Number(n);
@@ -516,7 +526,7 @@ function initials(name){
    APP STATE
    ========================================================= */
 const app = { screen:'home', patientId:null, tab:'hoy', openHist:{} };
-const modalState = { mode:null, step:1, category:null, exerciseName:null, sets:[{reps:'',weight:''}], note:'', editSessionId:null, editExerciseId:null, patientId:null };
+const modalState = { mode:null, step:1, category:null, exerciseName:null, sets:[{reps:'',weight:''}], note:'', pain:'', rir:'', editSessionId:null, editExerciseId:null, patientId:null };
 
 const root = document.getElementById('app');
 
@@ -551,6 +561,7 @@ function renderHome(){
     <div class="search-wrap">
       <input class="search-input" id="patientSearch" type="text" placeholder="Buscar paciente por nombre…" oninput="filterPatients()">
     </div>
+    ${backupReminderHtml()}
     <div class="section" style="padding-top:6px;">
       <div id="patientList">${renderPatientCards(patients)}</div>
     </div>
@@ -634,7 +645,16 @@ function saveNewPatient(){
   const name = input.value.trim();
   if(!name){ input.focus(); return; }
   const patients = getPatients();
-  const p = { id: uid(), name, createdAt: todayISO() };
+  let finalName = name;
+  const suffix = (name.match(/\s*\(\d+\)\s*$/)||[''])[0];
+  const toks = name.replace(/\s*\(\d+\)\s*$/,'').trim().split(/\s+/);
+  const lastTok = toks[toks.length-1].replace(/\./g,'');
+  if(toks.length>=2 && lastTok.length>1){
+    const sug = toks.slice(0,-1).join(' ')+' '+lastTok[0].toUpperCase()+'.'+suffix;
+    if(confirm(`Parece incluir un apellido completo. Para proteger la identidad se recomienda "${sug}".\n\nAceptar: usar "${sug}"\nCancelar: volver a editar`)) finalName = sug;
+    else { input.focus(); return; }
+  }
+  const p = { id: uid(), name: finalName, createdAt: todayISO() };
   patients.push(p);
   savePatients(patients);
   closeModal();
@@ -674,21 +694,67 @@ const RATIOS = {
   'Sóleo unilateral (rodilla flectada)':{v:[[.85,1.3,1.75],[.65,1,1.3]], note:'carga externa'}
 };
 function suggestedLoad(patientId, exName){
-  const r = RATIOS[exName]; if(!r) return null;
   const pt = getPatients().find(p=>p.id===patientId);
-  const pr = pt && pt.profile;
-  if(!pr || !pr.sex || !pr.age || !pr.bw) return {missing:true};
-  const rm = r.v[pr.sex==='F'?1:0][pr.lvl||0] * ageFactor(pr.age) * pr.bw;
+  const pr = (pt && pt.profile) || {};
   const G = GOALS_BTR[pr.goal||'rehab'];
   const h = x => Math.round(x*2)/2;
+  const measured = pt && pt.rm && pt.rm[exName];
+  if(measured) return { lo:h(measured*G.lo), hi:h(measured*G.hi), rm:h(measured), G, measured:true };
+  const r = RATIOS[exName]; if(!r) return null;
+  if(!pr.sex || !pr.age || !pr.bw) return { missing:true };
+  const rm = r.v[pr.sex==='F'?1:0][pr.lvl||0] * ageFactor(pr.age) * pr.bw;
   return { lo:h(rm*G.lo), hi:h(rm*G.hi), rm:h(rm), G, note:r.note };
 }
 function loadHintHtml(){
   const s = suggestedLoad(modalState.patientId, modalState.exerciseName);
-  if(!s) return '';
-  if(s.missing) return `<div class="load-hint"><span>Agrega sexo, edad, peso y nivel del paciente desde el menú ⋯ para ver una carga sugerida.</span></div>`;
+  const link = `<a class="rm-link" onclick="setMeasuredRM()">${s&&s.measured?'Editar':'Registrar'} 1RM medido</a>`;
+  if(!s) return `<div class="load-hint plain">${link} para ver una carga sugerida.</div>`;
+  if(s.missing) return `<div class="load-hint"><span>Agrega sexo, edad, peso y nivel desde el menú ⋯ del paciente para ver una carga sugerida.</span>${link}</div>`;
   return `<div class="load-hint"><strong>Carga sugerida: ${formatNumberCL(s.lo)}–${formatNumberCL(s.hi)} kg</strong>${s.note?` (${s.note})`:''}
-    <span>${s.G.t} · ${Math.round(s.G.lo*100)}–${Math.round(s.G.hi*100)}% de 1RM estimado (${formatNumberCL(s.rm)} kg) · ${s.G.rx}</span></div>`;
+    <span>${s.G.t} · ${Math.round(s.G.lo*100)}–${Math.round(s.G.hi*100)}% de 1RM ${s.measured?'medido':'estimado'} (${formatNumberCL(s.rm)} kg) · ${s.G.rx}</span>${link}</div>`;
+}
+function setMeasuredRM(){
+  const list = getPatients(); const i = list.findIndex(p=>p.id===modalState.patientId); if(i<0) return;
+  const cur = (list[i].rm||{})[modalState.exerciseName];
+  const v = prompt('1RM medido (kg) de '+modalState.exerciseName+'. Déjalo vacío para borrarlo.', cur||'');
+  if(v===null) return;
+  const n = Number(normalizeDecimalStr(v));
+  list[i].rm = list[i].rm || {};
+  if(n>0) list[i].rm[modalState.exerciseName] = n; else delete list[i].rm[modalState.exerciseName];
+  savePatients(list);
+  document.getElementById('loadHintBox').innerHTML = loadHintHtml();
+}
+function lastTimeHtml(){
+  const pid = modalState.patientId; if(!pid || !modalState.exerciseName) return '';
+  let ref = todayISO();
+  if(modalState.mode==='edit'){ const cur = getSessions().find(x=>x.id===modalState.editSessionId); if(cur) ref = cur.date; }
+  const nm = modalState.exerciseName.toLowerCase();
+  const prev = getSessions().filter(x=>x.patientId===pid && x.date<ref).sort((a,b)=>b.date.localeCompare(a.date));
+  for(const ss of prev){
+    const ex = ss.exercises.find(e=>e.category===modalState.category && e.name.toLowerCase()===nm);
+    if(ex){
+      const sets = ex.sets.map(x=>`${x.reps}×${has(x.weight)?formatNumberCL(x.weight)+'kg':'—'}`).join(' · ');
+      return `<div class="last-time"><strong>Última vez · ${formatDateHuman(ss.date)}</strong>${sets}${has(ex.rir)?` · RIR ${ex.rir}`:''}${has(ex.pain)?` · dolor ${ex.pain}/10`:''}</div>`;
+    }
+  }
+  return '';
+}
+function backupReminderHtml(){
+  if(!getPatients().length) return '';
+  const exported = localStorage.getItem(LS_EXPORT);
+  const base = exported || localStorage.getItem(LS_SEEN) || todayISO();
+  const snooze = localStorage.getItem(LS_SNOOZE);
+  if(snooze && snooze > todayISO()) return '';
+  const days = Math.floor((new Date(todayISO()+'T00:00:00') - new Date(base+'T00:00:00'))/86400000);
+  if(days < 14) return '';
+  const standalone = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  return `<div class="reminder"><strong>${exported?`Hace ${days} días que no exportas tus datos.`:'Aún no has exportado un respaldo.'}</strong> Los datos viven solo en este dispositivo.${standalone?'':' Instala la app en la pantalla de inicio para protegerlos mejor.'}
+    <div class="row"><button class="btn btn-primary btn-sm" onclick="exportData()">Exportar ahora</button><button class="btn btn-ghost btn-sm" onclick="snoozeBackup()">Más tarde</button></div></div>`;
+}
+function snoozeBackup(){
+  const d = new Date(); d.setDate(d.getDate()+3);
+  localStorage.setItem(LS_SNOOZE, `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  render();
 }
 function openProfileModal(){
   const pt = getPatients().find(p=>p.id===app.patientId); const pr = (pt&&pt.profile)||{};
@@ -843,6 +909,7 @@ function renderExCard(ex, sessionId){
       <div class="set-chips">
         ${ex.sets.map((s,i)=>`<span class="set-chip">${s.reps}<span class="x">×</span>${s.weight!==''&&s.weight!==null&&s.weight!==undefined ? formatNumberCL(s.weight)+'kg' : '—'}</span>`).join('')}
       </div>
+      ${(has(ex.rir)||has(ex.pain)) ? `<div class="set-chips" style="margin-top:6px;">${has(ex.rir)?`<span class="meta-chip">RIR ${ex.rir}</span>`:''}${has(ex.pain)?`<span class="meta-chip pain">Dolor ${ex.pain}/10</span>`:''}</div>` : ''}
       ${ex.note ? `<div class="ex-note">${escapeHtml(ex.note)}</div>` : ''}
     </div>
   `;
@@ -1110,7 +1177,7 @@ function openAddExerciseModal(patientId){
   modalState.category = null;
   modalState.exerciseName = null;
   modalState.sets = [{reps:'',weight:''}];
-  modalState.note = '';
+  modalState.note = ''; modalState.pain = ''; modalState.rir = '';
   modalState.editSessionId = null;
   modalState.editExerciseId = null;
   modalState.patientId = patientId;
@@ -1126,7 +1193,7 @@ function openEditExerciseModal(sessionId, exId){
   modalState.category = ex.category;
   modalState.exerciseName = ex.name;
   modalState.sets = ex.sets.map(s=>({reps:s.reps, weight:s.weight}));
-  modalState.note = ex.note || '';
+  modalState.note = ex.note || ''; modalState.pain = has(ex.pain)?ex.pain:''; modalState.rir = has(ex.rir)?ex.rir:'';
   modalState.editSessionId = sessionId;
   modalState.editExerciseId = exId;
   modalState.patientId = session.patientId;
@@ -1213,11 +1280,16 @@ function modalStepSets(){
       <button class="modal-close" onclick="closeModal()">${iconClose()}</button>
     </div>
     <p class="ex-card-cat" style="margin:-6px 0 14px;">${catByKey(modalState.category).label}</p>
-    ${loadHintHtml()}
+    ${lastTimeHtml()}
+    <div id="loadHintBox">${loadHintHtml()}</div>
     <div id="setsRows"></div>
     <button class="btn btn-ghost btn-sm" onclick="addSetRow()">+ Agregar serie</button>
     <p class="hint">Cada serie nueva copia reps y peso de la anterior — edítala si esta serie cambia.</p>
-    <div class="field" style="margin-top:16px;">
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <div class="field" style="flex:1;margin:0"><label>RIR (opcional)</label><input type="text" id="exRir" inputmode="numeric" value="${modalState.rir}" placeholder="—"></div>
+      <div class="field" style="flex:1;margin:0"><label>Dolor 0–10 (opcional)</label><input type="text" id="exPain" inputmode="numeric" value="${modalState.pain}" placeholder="—"></div>
+    </div>
+    <div class="field" style="margin-top:12px;">
       <label>Nota del ejercicio (opcional)</label>
       <textarea id="exerciseNote" rows="2" placeholder="Ej: técnica a corregir, dolor referido en la última serie…">${escapeHtml(modalState.note||'')}</textarea>
     </div>
@@ -1306,18 +1378,21 @@ function saveExerciseFromModal(){
 
   const sessions = getSessions();
   const note = document.getElementById('exerciseNote').value.trim();
+  const clamp = (v,m)=>{ const n=parseInt(v,10); return isNaN(n)?'':Math.min(m,Math.max(0,n)); };
+  const rir = clamp(document.getElementById('exRir').value, 10);
+  const pain = clamp(document.getElementById('exPain').value, 10);
   if(modalState.mode==='add'){
     const session = getOrCreateTodaySession(modalState.patientId);
     const idx = sessions.findIndex(s=>s.id===session.id);
     sessions[idx].exercises.push({
-      id: uid(), category: modalState.category, name: modalState.exerciseName, sets, note
+      id: uid(), category: modalState.category, name: modalState.exerciseName, sets, note, rir, pain
     });
     saveSessions(sessions);
   } else {
     const idx = sessions.findIndex(s=>s.id===modalState.editSessionId);
     const exIdx = sessions[idx].exercises.findIndex(e=>e.id===modalState.editExerciseId);
     sessions[idx].exercises[exIdx] = {
-      id: modalState.editExerciseId, category: modalState.category, name: modalState.exerciseName, sets, note
+      id: modalState.editExerciseId, category: modalState.category, name: modalState.exerciseName, sets, note, rir, pain
     };
     saveSessions(sessions);
   }
@@ -1401,7 +1476,9 @@ function exportData(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  localStorage.setItem(LS_EXPORT, todayISO());
   toast('Respaldo descargado');
+  if(app.screen==='home') render();
 }
 
 function handleImportFile(evt){
@@ -1503,6 +1580,7 @@ document.addEventListener('click', (e)=>{
 /* =========================================================
    INIT
    ========================================================= */
+if(!localStorage.getItem(LS_SEEN)) localStorage.setItem(LS_SEEN, todayISO());
 render();
 </script>
 </body>
